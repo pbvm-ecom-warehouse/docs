@@ -85,7 +85,7 @@ Các field `createdBy`/`approvedBy` hiện có giữ nguyên kiểu `ObjectId`, 
 ### 2.2 ProductVariant
 
 - **Bỏ** 3 cột cố định `size` / `material` / `color`.
-- **Thêm** `attributes: [{ name: String, value: String }]` — danh sách thuộc tính linh động, vd `[{name:"ML",value:"500"},{name:"Màu",value:"Đỏ"}]`. Thêm thuộc tính mới không cần sửa schema.
+- **Thêm** `attributes: [{ name: String, value: String, code: String }]` — danh sách thuộc tính linh động. `value` là giá trị hiển thị (tiếng Việt, có dấu), `code` là mã ngắn ASCII dùng để ghép SKU. Vd `[{name:"ML",value:"500ml",code:"500"},{name:"Màu",value:"Đỏ",code:"RED"}]`. Thêm thuộc tính mới không cần sửa schema.
 - **Thêm** `sku: String` (unique, required) — đơn vị định danh lưu kho thật.
 - Giữ: `name`, `price`, `isActive`, `productId`.
 
@@ -105,8 +105,11 @@ Product "Ly nhựa" (code: CUP-PLA), thuộc tính { ML, Màu }
 
 ### 2.4 Quy ước sinh SKU (linh động)
 
-- Khi tạo variant, hệ thống **tự gợi ý**: `{Product.code}-{các attribute value ghép lại}` → vd `CUP-PLA-500-RED`.
-- Nếu Product không có `code` → ghép thuần từ các attribute value.
+- Khi tạo variant, hệ thống **tự gợi ý**: `{Product.code}-{các attribute.code ghép lại}` → vd `CUP-PLA-500-RED`.
+- **Ghép theo `code` của thuộc tính** (không dùng `value` để tránh dấu/khoảng trắng), **theo đúng thứ tự phần tử** trong `attributes[]` (thứ tự cố định khi nhập → SKU ổn định).
+- Nếu một thuộc tính thiếu `code` → fallback **slugify** `value`: bỏ dấu, viết HOA, thay khoảng trắng bằng `-`.
+- Nếu Product không có `code` → ghép thuần từ các `code` thuộc tính.
+- Chuẩn hoá kết quả: HOA toàn bộ, chỉ gồm `[A-Z0-9-]`.
 - Field hiển thị sẵn giá trị gợi ý nhưng **cho sửa tay** trước khi lưu.
 - Khi lưu: **validate unique** toàn hệ thống; trùng → báo lỗi.
 
@@ -123,7 +126,7 @@ Product "Ly nhựa" (code: CUP-PLA), thuộc tính { ML, Màu }
 | `overview/system-context.md` | Bảng roles `ADMIN/MANAGER/STAFF` → bộ 6 role; RolesGuard đổi sang kiểm-tra-trong-mảng; `User.roles[]` |
 | `warehouse/use-cases.md` | Cột Actor + dòng "Actor:" mỗi UC: thay `STAFF` bằng role cụ thể |
 | `warehouse/workflow.md` | Đổi nhãn cột "STAFF" trong từng sơ đồ thành role tương ứng; WF-05 tách rõ PICKER (xuất nguồn) / RECEIVER (nhận đích) |
-| `warehouse/data-model.md` | `User.roles[]`; `PrintJob.confirmedBy`; `StockCount.countedBy`; `Product.code` (bỏ `Product.sku`); `Variant.attributes[]` + `Variant.sku` (bỏ size/material/color) |
+| `warehouse/data-model.md` | `User.roles[]`; `PrintJob.confirmedBy`; `StockCount.countedBy`; `Product.code` (bỏ `Product.sku`); `Variant.attributes[]` (name/value/code) + `Variant.sku` (bỏ size/material/color); quy ước sinh SKU từ `code` |
 
 ## Ngoài phạm vi (YAGNI)
 
