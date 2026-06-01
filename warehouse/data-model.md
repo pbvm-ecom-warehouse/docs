@@ -49,32 +49,20 @@ Warehouse → Zone → Rack → Shelf
 
 ## Nhóm 2: Hàng hóa
 
-### Product (Sản phẩm / Nguyên liệu)
+> **Ownership:** WMS chỉ giữ phần *vật lý* của hàng hóa (`warehouse_items`): SKU, đơn vị, loại, thuộc tính, vị trí, tồn. Phần *bán hàng* (tên hiển thị, ảnh, **giá**, danh mục) thuộc Ecommerce (`products`/`product_variants`). Hai bên nối nhau **chỉ qua `sku`** — xem [data-ownership.md](../overview/data-ownership.md).
 
-> Product là **nhóm logic**. Đơn vị lưu kho & đếm tồn thực sự là Variant (xem dưới).
+### WarehouseItem (Hàng trong kho — đơn vị lưu kho)
+
+> Mỗi WarehouseItem = **1 SKU duy nhất** = đơn vị đếm tồn. Biến thể (size/màu...) là các SKU khác nhau → các WarehouseItem khác nhau. Thuộc tính lưu linh động (key-value), thêm thuộc tính mới không cần sửa schema. **Không có giá** (giá là của Ecommerce).
 
 | Field | Type | Mô tả |
 |---|---|---|
 | id | ObjectId | |
-| name | String | Tên sản phẩm |
-| code | String | Mã nhóm (unique) — vd `CUP-PLA`, dùng làm tiền tố gợi ý SKU |
+| sku | String | **Mã SKU (unique, required)** — khóa định danh & liên kết với Ecommerce |
+| name | String | Tên nội bộ (VD: Ly nhựa 500ml Đỏ) |
 | type | Enum | `MATERIAL` / `CUP_BLANK` / `CUP_PRINTED` / `PACKAGING` |
 | unit | String | Đơn vị tính (kg, lít, cái, thùng, cuộn...) |
-| description | String | Mô tả |
-| isActive | Boolean | |
-
-### ProductVariant (Biến thể — đơn vị lưu kho)
-
-> Mỗi Variant = một tổ hợp thuộc tính cụ thể = **1 SKU duy nhất**. Thuộc tính lưu linh động (key-value), thêm thuộc tính mới không cần sửa schema.
-
-| Field | Type | Mô tả |
-|---|---|---|
-| id | ObjectId | |
-| productId | ObjectId | |
-| name | String | Tên biến thể (VD: Ly nhựa 500ml Đỏ) |
-| sku | String | **Mã SKU (unique, required)** — định danh khi lưu/xuất/đếm tồn |
 | attributes | Array | Danh sách thuộc tính: `[{ name, value, code }]` |
-| price | Number | Giá bán |
 | isActive | Boolean | |
 
 **attributes[]** — mỗi phần tử:
@@ -87,10 +75,9 @@ Warehouse → Zone → Rack → Shelf
 
 **Quy ước sinh SKU (tự gợi ý + sửa được):**
 
-- Gợi ý: `{Product.code}-{các attribute.code ghép lại}` → vd `CUP-PLA-500-RED`.
+- Gợi ý: `{tiền tố}-{các attribute.code ghép lại}` → vd `CUP-PLA-500-RED`. Tiền tố nhập tay hoặc suy từ `type`/nhóm.
 - Ghép theo `code` (không dùng `value` để tránh dấu/khoảng trắng), theo **đúng thứ tự** phần tử trong `attributes[]`.
 - Thiếu `code` → fallback slugify `value` (bỏ dấu, HOA, thay khoảng trắng bằng `-`).
-- Product không có `code` → ghép thuần từ các `code` thuộc tính.
 - Chuẩn hoá: HOA toàn bộ, chỉ gồm `[A-Z0-9-]`.
 - Cho **sửa tay** trước khi lưu; khi lưu **validate unique** toàn hệ thống.
 
@@ -100,12 +87,12 @@ Warehouse → Zone → Rack → Shelf
 
 ### InventoryStock (Tồn kho theo vị trí)
 
-> Một sản phẩm/biến thể có thể nằm ở nhiều shelf khác nhau, hoặc ở nhiều kho khác nhau.
+> Một WarehouseItem có thể nằm ở nhiều shelf khác nhau, hoặc ở nhiều kho khác nhau.
 
 | Field | Type | Mô tả |
 |---|---|---|
 | id | ObjectId | |
-| variantId | ObjectId | Biến thể sản phẩm |
+| itemId | ObjectId | WarehouseItem (SKU) |
 | warehouseId | ObjectId | Kho chứa |
 | shelfId | ObjectId | Vị trí shelf cụ thể |
 | quantity | Number | Số lượng hiện tại |
@@ -134,7 +121,7 @@ Warehouse → Zone → Rack → Shelf
 |---|---|---|
 | id | ObjectId | |
 | purchaseOrderId | ObjectId | |
-| variantId | ObjectId | |
+| itemId | ObjectId | |
 | expectedQty | Number | Số lượng đặt |
 | unit | String | |
 | unitPrice | Number | Giá đặt |
@@ -160,7 +147,7 @@ Warehouse → Zone → Rack → Shelf
 |---|---|---|
 | id | ObjectId | |
 | grnId | ObjectId | |
-| variantId | ObjectId | |
+| itemId | ObjectId | |
 | expectedQty | Number | Số lượng theo PO |
 | actualQty | Number | Số lượng thực tế nhận |
 | unit | String | |
@@ -184,7 +171,7 @@ Warehouse → Zone → Rack → Shelf
 |---|---|---|
 | id | ObjectId | |
 | putAwayTaskId | ObjectId | |
-| variantId | ObjectId | |
+| itemId | ObjectId | |
 | quantity | Number | |
 | shelfId | ObjectId | Vị trí chỉ định |
 
@@ -209,8 +196,8 @@ Warehouse → Zone → Rack → Shelf
 |---|---|---|
 | id | ObjectId | |
 | printJobId | ObjectId | |
-| inputVariantId | ObjectId | CUP_BLANK đầu vào |
-| outputVariantId | ObjectId | CUP_PRINTED đầu ra |
+| inputItemId | ObjectId | WarehouseItem CUP_BLANK đầu vào |
+| outputItemId | ObjectId | WarehouseItem CUP_PRINTED đầu ra |
 | quantity | Number | |
 
 ---
@@ -233,7 +220,7 @@ Warehouse → Zone → Rack → Shelf
 |---|---|---|
 | id | ObjectId | |
 | goodsIssueId | ObjectId | |
-| variantId | ObjectId | |
+| itemId | ObjectId | |
 | quantity | Number | |
 | shelfId | ObjectId | Lấy từ shelf nào |
 | unit | String | |
@@ -260,7 +247,7 @@ Warehouse → Zone → Rack → Shelf
 |---|---|---|
 | id | ObjectId | |
 | stockCountId | ObjectId | |
-| variantId | ObjectId | |
+| itemId | ObjectId | |
 | shelfId | ObjectId | |
 | systemQty | Number | Tồn theo hệ thống |
 | actualQty | Number | Tồn thực tế đếm được |
@@ -288,7 +275,7 @@ Warehouse → Zone → Rack → Shelf
 |---|---|---|
 | id | ObjectId | |
 | stockTransferId | ObjectId | |
-| variantId | ObjectId | |
+| itemId | ObjectId | |
 | quantity | Number | |
 | fromShelfId | ObjectId | Lấy từ shelf nào |
 | toShelfId | ObjectId | Đặt vào shelf nào tại kho đích |

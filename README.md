@@ -39,8 +39,13 @@ Warehouse (Kho trung tâm / Kho phụ)
 
 ## Actors
 
+> 1 user có thể giữ **nhiều role** (`User.roles[]`). RolesGuard cho qua nếu roles giao với role yêu cầu.
+
 | Role | Quyền hạn |
 |---|---|
-| ADMIN | Xem tất cả, cấu hình hệ thống, báo cáo toàn diện |
+| ADMIN | Xem tất cả, cấu hình hệ thống, báo cáo toàn diện (bypass mọi guard) |
 | MANAGER | Tạo/duyệt phiếu nhập-xuất, lệnh in, kiểm kho, chuyển kho |
-| STAFF | Thực hiện nhập-xuất kho, put-away, kiểm đếm thực tế |
+| RECEIVER | Nhận hàng (GRN), put-away, nhận hàng chuyển kho |
+| PICKER | Soạn & xuất hàng, xuất hàng chuyển kho |
+| PRINTER | Vận hành in, xác nhận in xong |
+| COUNTER | Kiểm đếm tồn thực tế |
