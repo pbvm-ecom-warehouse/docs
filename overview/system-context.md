@@ -17,7 +17,7 @@ Client (Web / Mobile)
 
 | App | Port | Người dùng | Mô tả |
 |---|---|---|---|
-| `wms` | 3001 | Staff / Manager / Admin | Quản lý kho, nhập xuất, in ly, kiểm kho |
+| `wms` | 3001 | Admin / Manager / Receiver / Picker / Printer / Counter | Quản lý kho, nhập xuất, in ly, kiểm kho |
 | `ecommerce` | 3002 | Khách hàng | Cửa hàng online, đặt hàng, thanh toán |
 | `notification` | 3003 | Internal | Gửi email / SMS / push cho cả 2 app |
 
@@ -77,8 +77,19 @@ wms-ecom/
 
 | Loại | App | Collection | Roles |
 |---|---|---|---|
-| Nhân viên nội bộ | WMS | `users` | ADMIN / MANAGER / STAFF |
+| Nhân viên nội bộ | WMS | `users` | ADMIN / MANAGER / RECEIVER / PICKER / PRINTER / COUNTER |
 | Khách hàng | Ecommerce | `customers` | — |
+
+> **User giữ nhiều role** — field `roles: String[]`. Một nhân viên có thể vừa `RECEIVER` vừa `PICKER`.
+
+| Role | Phụ trách |
+|---|---|
+| `ADMIN` | Toàn quyền, bypass mọi guard |
+| `MANAGER` | Tạo PO, tạo lệnh in/kiểm/chuyển, **duyệt** |
+| `RECEIVER` | Nhận hàng + put-away (GRN, put-away, nhận hàng chuyển kho) |
+| `PICKER` | Soạn & xuất hàng (xuất kho, xuất hàng chuyển kho) |
+| `PRINTER` | Vận hành in (xác nhận in xong) |
+| `COUNTER` | Kiểm đếm tồn |
 
 ### Cơ chế
 
@@ -89,12 +100,13 @@ wms-ecom/
 libs/auth/
 ├── jwt.strategy.ts       ← Decode & validate JWT payload
 ├── jwt-auth.guard.ts     ← Bảo vệ route yêu cầu đăng nhập
-├── roles.guard.ts        ← Kiểm tra ADMIN / MANAGER / STAFF
+├── roles.guard.ts        ← Cho qua nếu user.roles GIAO với @Roles(...) ≠ ∅; ADMIN bypass
 └── auth.module.ts        ← Import vào bất kỳ app nào
 ```
 
 ```typescript
 // Dùng chung ở mọi app
+// RolesGuard cho qua nếu user.roles chứa ÍT NHẤT MỘT role trong @Roles(...)
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles('MANAGER')
 @Get('purchase-orders')

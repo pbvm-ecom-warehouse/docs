@@ -51,30 +51,48 @@ Warehouse → Zone → Rack → Shelf
 
 ### Product (Sản phẩm / Nguyên liệu)
 
+> Product là **nhóm logic**. Đơn vị lưu kho & đếm tồn thực sự là Variant (xem dưới).
+
 | Field | Type | Mô tả |
 |---|---|---|
 | id | ObjectId | |
 | name | String | Tên sản phẩm |
-| sku | String | Mã SKU (unique) |
+| code | String | Mã nhóm (unique) — vd `CUP-PLA`, dùng làm tiền tố gợi ý SKU |
 | type | Enum | `MATERIAL` / `CUP_BLANK` / `CUP_PRINTED` / `PACKAGING` |
 | unit | String | Đơn vị tính (kg, lít, cái, thùng, cuộn...) |
 | description | String | Mô tả |
 | isActive | Boolean | |
 
-### ProductVariant (Biến thể)
+### ProductVariant (Biến thể — đơn vị lưu kho)
 
-> Dùng cho ly: phân theo size, chất liệu. Dùng cho nguyên liệu: phân theo đóng gói.
+> Mỗi Variant = một tổ hợp thuộc tính cụ thể = **1 SKU duy nhất**. Thuộc tính lưu linh động (key-value), thêm thuộc tính mới không cần sửa schema.
 
 | Field | Type | Mô tả |
 |---|---|---|
 | id | ObjectId | |
 | productId | ObjectId | |
-| name | String | Tên biến thể (VD: Ly nhựa 500ml) |
-| size | String | S / M / L / XL / 250ml / 500ml... |
-| material | String | PLASTIC / PAPER / ... |
-| color | String | Màu (nếu có) |
+| name | String | Tên biến thể (VD: Ly nhựa 500ml Đỏ) |
+| sku | String | **Mã SKU (unique, required)** — định danh khi lưu/xuất/đếm tồn |
+| attributes | Array | Danh sách thuộc tính: `[{ name, value, code }]` |
 | price | Number | Giá bán |
 | isActive | Boolean | |
+
+**attributes[]** — mỗi phần tử:
+
+| Field | Type | Mô tả |
+|---|---|---|
+| name | String | Tên thuộc tính (vd `ML`, `Màu`) |
+| value | String | Giá trị hiển thị, có dấu (vd `500ml`, `Đỏ`) |
+| code | String | Mã ngắn ASCII để ghép SKU (vd `500`, `RED`) |
+
+**Quy ước sinh SKU (tự gợi ý + sửa được):**
+
+- Gợi ý: `{Product.code}-{các attribute.code ghép lại}` → vd `CUP-PLA-500-RED`.
+- Ghép theo `code` (không dùng `value` để tránh dấu/khoảng trắng), theo **đúng thứ tự** phần tử trong `attributes[]`.
+- Thiếu `code` → fallback slugify `value` (bỏ dấu, HOA, thay khoảng trắng bằng `-`).
+- Product không có `code` → ghép thuần từ các `code` thuộc tính.
+- Chuẩn hoá: HOA toàn bộ, chỉ gồm `[A-Z0-9-]`.
+- Cho **sửa tay** trước khi lưu; khi lưu **validate unique** toàn hệ thống.
 
 ---
 
@@ -133,7 +151,7 @@ Warehouse → Zone → Rack → Shelf
 | receiveDate | DateTime | |
 | status | Enum | `DRAFT` / `CONFIRMED` / `APPROVED` |
 | note | String | |
-| createdBy | ObjectId | STAFF |
+| createdBy | ObjectId | RECEIVER |
 | approvedBy | ObjectId | MANAGER |
 
 ### GoodsReceiveItem
@@ -158,7 +176,7 @@ Warehouse → Zone → Rack → Shelf
 | grnId | ObjectId | Từ GRN nào |
 | warehouseId | ObjectId | |
 | status | Enum | `PENDING` / `COMPLETED` |
-| createdBy | ObjectId | |
+| createdBy | ObjectId | RECEIVER |
 
 ### PutAwayItem
 
@@ -182,7 +200,8 @@ Warehouse → Zone → Rack → Shelf
 | designFile | String | File design/logo |
 | status | Enum | `PENDING` / `IN_PROGRESS` / `COMPLETED` / `CANCELLED` |
 | note | String | |
-| createdBy | ObjectId | MANAGER |
+| createdBy | ObjectId | MANAGER (tạo lệnh in) |
+| confirmedBy | ObjectId | PRINTER (xác nhận in xong, nhập CUP_PRINTED) |
 
 ### PrintJobItem
 
@@ -206,7 +225,7 @@ Warehouse → Zone → Rack → Shelf
 | issueDate | DateTime | |
 | status | Enum | `DRAFT` / `CONFIRMED` |
 | note | String | |
-| createdBy | ObjectId | STAFF |
+| createdBy | ObjectId | PICKER |
 
 ### GoodsIssueItem
 
@@ -231,8 +250,9 @@ Warehouse → Zone → Rack → Shelf
 | countDate | DateTime | |
 | status | Enum | `DRAFT` / `IN_PROGRESS` / `COMPLETED` / `APPROVED` |
 | note | String | |
-| createdBy | ObjectId | MANAGER |
-| approvedBy | ObjectId | MANAGER |
+| createdBy | ObjectId | MANAGER (tạo phiếu) |
+| countedBy | ObjectId | COUNTER (kiểm đếm thực tế) |
+| approvedBy | ObjectId | MANAGER (duyệt điều chỉnh) |
 
 ### StockCountItem
 

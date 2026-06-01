@@ -20,7 +20,7 @@ Khách hàng  ←  [UC-05 Xuất kho]  ←  Kho
 ## WF-01: Nhập hàng từ nhà cung cấp (UC-01 + UC-02 + UC-03)
 
 ```
-MANAGER                    STAFF                     Hệ thống
+MANAGER                    RECEIVER                  Hệ thống
    |                          |                           |
    |-- Tạo PO --------------->|                           |
    |   (chọn NCC, hàng, qty)  |                           |
@@ -48,7 +48,7 @@ MANAGER                    STAFF                     Hệ thống
 ## WF-02: Lệnh in ly theo đơn hàng (UC-04)
 
 ```
-MANAGER                    STAFF                     Hệ thống
+MANAGER                    PRINTER                   Hệ thống
    |                          |                           |
    |-- Tạo Print Job -------->|                    Kiểm tồn CUP_BLANK
    |   (loại ly, qty, design) |                    Nếu đủ: tiếp tục
@@ -70,7 +70,7 @@ MANAGER                    STAFF                     Hệ thống
 ## WF-03: Xuất kho theo đơn hàng (UC-05)
 
 ```
-Hệ thống (Order)           STAFF                     Hệ thống (WMS)
+Hệ thống (Order)           PICKER                    Hệ thống (WMS)
    |                          |                           |
    |-- Đơn hàng confirmed --->|                           |
    |   Sinh phiếu xuất kho    |                    Kiểm tồn kho
@@ -89,7 +89,7 @@ Hệ thống (Order)           STAFF                     Hệ thống (WMS)
 ## WF-04: Kiểm kho & Điều chỉnh tồn (UC-06)
 
 ```
-MANAGER                    STAFF                     Hệ thống
+MANAGER                    COUNTER                   Hệ thống
    |                          |                           |
    |-- Tạo phiếu kiểm kho --->|                    Sinh danh sách
    |   (chọn phạm vi)         |                    hàng cần kiểm
@@ -108,22 +108,24 @@ MANAGER                    STAFF                     Hệ thống
 
 ## WF-05: Chuyển kho (UC-07)
 
+> Cột giữa gồm 2 role: **PICKER** xuất tại kho nguồn, **RECEIVER** nhận tại kho đích.
+
 ```
-MANAGER                    STAFF                     Hệ thống
+MANAGER                 PICKER / RECEIVER            Hệ thống
    |                          |                           |
    |-- Tạo lệnh chuyển kho -->|                    Kiểm tồn kho nguồn
    |   (kho nguồn → đích,     |                    Nếu đủ: tiếp tục
    |    danh sách hàng)       |                    Transfer → CONFIRMED
    |                          |                           |
-   |                          |-- Chuẩn bị tại kho nguồn>|
-   |                          |-- Xác nhận xuất ---------->|
+   |             [PICKER]     |-- Chuẩn bị tại kho nguồn->|
+   |             [PICKER]     |-- Xác nhận xuất --------->|
    |                          |                    Trừ tồn kho nguồn
    |                          |                    Transfer → IN_TRANSIT
    |                          |                           |
    |       [ Vận chuyển đến kho đích ]                    |
    |                          |                           |
-   |                          |-- Xác nhận nhận tại đích->|
-   |                          |   Chỉ định vị trí         |
+   |           [RECEIVER]     |-- Xác nhận nhận tại đích->|
+   |           [RECEIVER]     |   Chỉ định vị trí         |
    |                          |                    Cộng tồn kho đích
    |                          |                    Transfer → COMPLETED
    |-- Duyệt hoàn tất ------->|                           |

@@ -93,11 +93,13 @@ apps/ecommerce/src/modules/auth/      ← Auth riêng cho Khách hàng
 ### JWT Payload
 
 ```typescript
-// WMS token — Staff/Manager/Admin
+// WMS token — nhân viên nội bộ
+type WmsRole = 'ADMIN' | 'MANAGER' | 'RECEIVER' | 'PICKER' | 'PRINTER' | 'COUNTER';
+
 interface WmsJwtPayload {
   sub: string;      // userId
-  role: 'ADMIN' | 'MANAGER' | 'STAFF';
-  type: 'STAFF';
+  roles: WmsRole[]; // user giữ nhiều role
+  type: 'WMS';
 }
 
 // Ecommerce token — Khách hàng
@@ -143,8 +145,9 @@ import { Roles } from '@app/auth';
 @Post('purchase-orders')
 createPurchaseOrder(@Body() dto: CreatePurchaseOrderDto) { ... }
 
-@UseGuards(JwtAuthGuard)
-@Roles('STAFF', 'MANAGER', 'ADMIN')
+// RolesGuard cho qua nếu user.roles chứa ít nhất một role liệt kê (ADMIN luôn bypass)
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles('RECEIVER')
 @Post('grn')
 createGRN(@Body() dto: CreateGRNDto) { ... }
 ```
