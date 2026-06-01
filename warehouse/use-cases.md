@@ -48,9 +48,10 @@
 ### Luồng chính
 
 1. RECEIVER tạo GRN — tham chiếu PO tương ứng
-2. Nhập số lượng thực tế nhận được từng mặt hàng *(có thể lệch với PO)*
-3. RECEIVER xác nhận nhận hàng → hệ thống cộng tồn kho
-4. MANAGER duyệt GRN
+2. **Quét barcode** từng mặt hàng → hệ thống khớp đúng dòng PO/GRN *(quét mã lạ/không thuộc PO → cảnh báo, cho chọn hoặc khai báo item)*
+3. Nhập số lượng thực tế nhận được từng mặt hàng *(có thể lệch với PO)*
+4. RECEIVER xác nhận nhận hàng → hệ thống cộng tồn kho
+5. MANAGER duyệt GRN
 5. Nếu lệch PO → ghi nhận chênh lệch, xử lý với nhà cung cấp
 
 ### Trạng thái GRN
@@ -72,10 +73,11 @@
 ### Luồng chính
 
 1. Hệ thống sinh danh sách hàng cần sắp xếp từ GRN vừa xác nhận
-2. RECEIVER chọn từng mặt hàng → chỉ định vị trí: **Zone → Rack → Shelf**
-3. Nếu một mặt hàng để nhiều vị trí → tách số lượng theo từng vị trí
-4. RECEIVER xác nhận put-away → hệ thống lưu vị trí tồn kho
-5. Khi xuất kho (UC-05) → hệ thống hiển thị vị trí để PICKER lấy đúng chỗ
+2. **Quét barcode SKU → quét barcode vị trí (shelf)** → nhập số lượng
+3. Hệ thống tự khớp dòng GRN *(sai item hoặc qty lệch → cảnh báo)*
+4. Nếu một mặt hàng để nhiều vị trí → tách số lượng theo từng vị trí (quét nhiều shelf)
+5. RECEIVER xác nhận put-away → hệ thống lưu vị trí tồn kho
+6. Khi xuất kho (UC-05) → hệ thống hiển thị vị trí để PICKER lấy đúng chỗ
 
 ---
 
@@ -90,7 +92,7 @@
 1. MANAGER tạo lệnh in — chọn loại ly (CUP_BLANK), số lượng, file design, tham chiếu đơn hàng
 2. Hệ thống kiểm tra tồn kho CUP_BLANK có đủ không
 3. Xuất CUP_BLANK khỏi kho → đưa vào máy in *(hệ thống trừ tồn CUP_BLANK)*
-4. In xong → PRINTER xác nhận nhập kho CUP_PRINTED
+4. In xong → PRINTER xác nhận nhập kho CUP_PRINTED *(hệ sinh/in tem barcode cho item CUP_PRINTED để put-away như hàng thường)*
 5. Hệ thống cộng tồn kho CUP_PRINTED
 
 ### Trạng thái Print Job
@@ -115,8 +117,9 @@
 1. Hệ thống sinh phiếu xuất kho từ đơn hàng đã xác nhận
 2. Kiểm tra tồn kho từng mặt hàng — cảnh báo nếu không đủ
 3. Hệ thống hiển thị vị trí (Zone/Rack/Shelf) của từng mặt hàng
-4. PICKER chuẩn bị hàng, đóng gói
-5. PICKER xác nhận xuất kho → hệ thống trừ tồn kho
+4. PICKER tới vị trí gợi ý → **quét barcode SKU + quét shelf** để xác nhận đúng món, đúng chỗ *(quét sai → cảnh báo)*
+5. PICKER chuẩn bị hàng, đóng gói
+6. PICKER xác nhận xuất kho → hệ thống trừ tồn kho
 6. Trạng thái đơn hàng cập nhật → `Đã xuất kho`
 
 ---

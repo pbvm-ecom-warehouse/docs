@@ -15,6 +15,8 @@ Khách hàng  ←  [UC-05 Xuất kho]  ←  Kho
                               [UC-07 Chuyển kho]
 ```
 
+> **Định danh bằng barcode:** ở các bước chạm hàng vật lý — nhận hàng (WF-01 GRN), put-away, xuất kho (WF-03), chuyển kho (WF-05) — thao tác chuẩn là **quét barcode SKU + quét barcode vị trí (shelf)** rồi mới xác nhận. Hệ tự khớp dòng chứng từ; quét sai item/vị trí hoặc lệch qty → cảnh báo.
+
 ---
 
 ## WF-01: Nhập hàng từ nhà cung cấp (UC-01 + UC-02 + UC-03)

@@ -43,7 +43,7 @@ Warehouse → Zone → Rack → Shelf
 | id | ObjectId | |
 | rackId | ObjectId | Thuộc rack nào |
 | level | Number | Số tầng (1, 2, 3...) |
-| code | String | Mã tầng |
+| code | String | Mã tầng — **giá trị barcode vị trí** (dán tem ở mỗi shelf, quét khi put-away/pick) |
 
 ---
 
@@ -59,11 +59,15 @@ Warehouse → Zone → Rack → Shelf
 |---|---|---|
 | id | ObjectId | |
 | sku | String | **Mã SKU (unique, required)** — khóa định danh & liên kết với Ecommerce |
+| barcode | String | Giá trị tem in cho SKU (Code128/QR). Mặc định **= `sku`**; quét ra → tra item |
+| altBarcodes | String[] | Mã NCC/nhà sản xuất (EAN/UPC sẵn trên hàng) map về cùng item |
 | name | String | Tên nội bộ (VD: Ly nhựa 500ml Đỏ) |
 | type | Enum | `MATERIAL` / `CUP_BLANK` / `CUP_PRINTED` / `PACKAGING` |
 | unit | String | Đơn vị tính (kg, lít, cái, thùng, cuộn...) |
 | attributes | Array | Danh sách thuộc tính: `[{ name, value, code }]` |
 | isActive | Boolean | |
+
+> **Định danh vật lý:** quét `barcode` (hoặc `altBarcodes`) → tra ra đúng `WarehouseItem`. Quét mã chưa có trong hệ → **chặn**, yêu cầu khai báo item trước (không cho tồn kho "mồ côi").
 
 **attributes[]** — mỗi phần tử:
 
