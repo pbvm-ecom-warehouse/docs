@@ -44,6 +44,7 @@ Warehouse → Zone → Rack → Shelf
 | rackId | ObjectId | Thuộc rack nào |
 | level | Number | Số tầng (1, 2, 3...) |
 | code | String | Mã tầng — **giá trị barcode vị trí** (dán tem ở mỗi shelf, quét khi put-away/pick) |
+| isStaging | Boolean | `true` = shelf "khu nhận hàng" (mỗi kho có 1), nơi hàng nằm tạm sau GRN trước khi put-away |
 
 ---
 
@@ -87,20 +88,41 @@ Warehouse → Zone → Rack → Shelf
 
 ---
 
-## Nhóm 3: Tồn kho
+## Nhóm 3: Tồn kho — 2 lớp
 
-### InventoryStock (Tồn kho theo vị trí)
+> Tồn kho tách **2 lớp** với bất biến luôn đúng:
+> ```
+> StockBalance.onHand (lớp 1)  =  Σ InventoryStock.quantity mọi shelf của kho đó (lớp 2, gồm staging)
+> available                    =  onHand − reserved
+> ```
+> Mọi thay đổi tồn cập nhật **cả 2 lớp trong cùng transaction**.
 
-> Một WarehouseItem có thể nằm ở nhiều shelf khác nhau, hoặc ở nhiều kho khác nhau.
+### StockBalance (Lớp 1 — tồn tổng theo SKU + kho)
+
+> Dùng cho **đặt/giữ hàng & chống oversell & sync Ecommerce**. `available` là số đẩy sang Ecommerce.
+
+| Field | Type | Mô tả |
+|---|---|---|
+| id | ObjectId | |
+| itemId | ObjectId | WarehouseItem (SKU) |
+| warehouseId | ObjectId | Kho |
+| onHand | Number | Tổng vật lý đang có (gồm cả hàng chưa put-away ở staging) |
+| reserved | Number | Đã giữ cho đơn/print job, chưa xuất |
+| minQuantity | Number | Ngưỡng cảnh báo tồn thấp → phát `stock.low` khi `available < minQuantity` |
+
+> `available = onHand − reserved` (tính khi cần, không lưu trùng).
+
+### InventoryStock (Lớp 2 — tồn theo vị trí)
+
+> Cho biết hàng **nằm shelf nào** để cất/lấy thực tế. Một WarehouseItem có thể nằm ở nhiều shelf / nhiều kho. Shelf `isStaging` chứa hàng vừa nhận, chưa put-away.
 
 | Field | Type | Mô tả |
 |---|---|---|
 | id | ObjectId | |
 | itemId | ObjectId | WarehouseItem (SKU) |
 | warehouseId | ObjectId | Kho chứa |
-| shelfId | ObjectId | Vị trí shelf cụ thể |
-| quantity | Number | Số lượng hiện tại |
-| minQuantity | Number | Ngưỡng cảnh báo tồn thấp |
+| shelfId | ObjectId | Vị trí shelf cụ thể (gồm cả shelf staging) |
+| quantity | Number | Số lượng tại shelf này |
 
 ---
 

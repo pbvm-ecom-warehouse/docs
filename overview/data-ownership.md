@@ -52,17 +52,19 @@ type: CUP_BLANK                images: ["img1.jpg", "img2.jpg"]
 
 ## Sync tồn kho qua Event
 
-Ecommerce không đọc `inventory_stocks` của WMS. WMS push event mỗi khi tồn kho thay đổi → Ecommerce tự cập nhật `availableQty` trong domain của mình.
+Ecommerce không đọc tồn của WMS. WMS push event mỗi khi **`available` đổi** (`available = StockBalance.onHand − reserved`) → Ecommerce tự cập nhật `availableQty` trong domain của mình.
 
 ### Luồng sync
 
 ```
-WMS xuất kho 50 ly
+WMS giữ hàng khi chốt đơn 50 ly (reserved += 50 → available -= 50)
   → push event: { sku: "LY-500ML", delta: -50 }
         ↓
 Ecommerce worker nhận event
   → product_variants.availableQty -= 50
 ```
+
+> Lúc PICKER xuất kho thật, `onHand -= 50` và `reserved -= 50` → `available` **không đổi** → không bắn event (đã trừ từ lúc chốt đơn, tránh trừ 2 lần).
 
 ### Code mẫu
 
@@ -92,9 +94,9 @@ export class StockProcessor {
 
 | Event | Từ | Đến | Khi nào |
 |---|---|---|---|
-| `stock.changed` | WMS | Ecommerce | Nhập kho, xuất kho, chuyển kho, kiểm kho |
-| `order.confirmed` | Ecommerce | WMS | Khách đặt hàng và thanh toán xong |
-| `goods.issued` | WMS | Ecommerce | Xuất kho xong → cập nhật trạng thái đơn |
+| `stock.changed` | WMS | Ecommerce | **Khi `available` đổi**: nhập kho (GRN), giữ hàng khi chốt đơn, hủy đơn, kiểm kho điều chỉnh, chuyển kho. *(Put-away & lúc pick-xuất KHÔNG đổi available → không bắn)* |
+| `order.confirmed` | Ecommerce | WMS | Khách đặt hàng và thanh toán xong → WMS giữ tồn (`reserved += qty`) |
+| `goods.issued` | WMS | Ecommerce | Xuất kho xong → cập nhật trạng thái đơn *(không trừ available lần nữa — đã trừ lúc chốt đơn)* |
 | `stock.low` | WMS | Notification | Tồn kho dưới ngưỡng `minQuantity` |
 | `payment.success` | Ecommerce | Notification | Thanh toán thành công → email xác nhận |
 | `goods.issued` | WMS | Notification | Hàng xuất kho → thông báo giao hàng |
@@ -127,13 +129,15 @@ async validateStock(items: OrderItem[]) {
 
 `validateStock` ở trên chỉ là **kiểm tra sơ bộ** dựa trên bản copy `availableQty` (có thể trễ vì sync bất đồng bộ). Nếu 2 khách mua cùng lúc món cuối cùng, cả 2 đều đọc `availableQty = 1` → cả 2 đơn lọt → oversell.
 
-Khi **chốt đơn**, phải giữ tồn **atomic** trên nguồn thật `wms_db.inventory_stocks` trong 1 transaction — vì cùng cluster nên làm được:
+Khi **chốt đơn**, phải giữ tồn **atomic** trên nguồn thật `wms_db.stock_balances` trong 1 transaction — vì cùng cluster nên làm được:
 
 ```
-Đặt hàng → mở transaction:
-  1. inventory_stocks: kiểm + trừ tồn (atomic, khóa document)
+Đặt hàng → chọn kho có available ≥ qty (ưu tiên CENTRAL) → mở transaction:
+  1. stock_balances: kiểm `onHand − reserved ≥ qty` rồi `reserved += qty` (atomic, khóa document)
   2. tạo order
-  → commit cùng lúc; nếu tồn không đủ → rollback + báo hết hàng
+  → commit cùng lúc; nếu không đủ → rollback + báo hết hàng
 ```
+
+> Giữ tồn ở **lớp tổng** (`stock_balances`), chưa cần biết shelf — PICKER chọn vị trí lấy sau ở khâu xuất kho.
 
 > Hai khách mua đồng thời ly cuối → chỉ 1 transaction commit được → **không bao giờ oversell**. Đây chính là lợi thế của monolith cùng cluster; nếu tách 2 MongoDB server riêng (microservices) thì mới phải dùng Saga.

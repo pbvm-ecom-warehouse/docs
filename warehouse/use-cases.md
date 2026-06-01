@@ -50,7 +50,7 @@
 1. RECEIVER tạo GRN — tham chiếu PO tương ứng
 2. **Quét barcode** từng mặt hàng → hệ thống khớp đúng dòng PO/GRN *(quét mã lạ/không thuộc PO → cảnh báo, cho chọn hoặc khai báo item)*
 3. Nhập số lượng thực tế nhận được từng mặt hàng *(có thể lệch với PO)*
-4. RECEIVER xác nhận nhận hàng → hệ thống cộng tồn kho
+4. RECEIVER xác nhận nhận hàng → hệ thống cộng tồn: `StockBalance.onHand +=` và đặt hàng vào **shelf staging** (lớp vị trí) — chờ put-away
 5. MANAGER duyệt GRN
 5. Nếu lệch PO → ghi nhận chênh lệch, xử lý với nhà cung cấp
 
@@ -76,7 +76,7 @@
 2. **Quét barcode SKU → quét barcode vị trí (shelf)** → nhập số lượng
 3. Hệ thống tự khớp dòng GRN *(sai item hoặc qty lệch → cảnh báo)*
 4. Nếu một mặt hàng để nhiều vị trí → tách số lượng theo từng vị trí (quét nhiều shelf)
-5. RECEIVER xác nhận put-away → hệ thống lưu vị trí tồn kho
+5. RECEIVER xác nhận put-away → hệ thống **chuyển hàng từ shelf staging → shelf thật** (chỉ đổi lớp vị trí; `onHand` không đổi nên không sync Ecommerce)
 6. Khi xuất kho (UC-05) → hệ thống hiển thị vị trí để PICKER lấy đúng chỗ
 
 ---
@@ -112,6 +112,8 @@
 **Trigger:** Đơn hàng được xác nhận, cần xuất hàng giao cho khách  
 **Áp dụng cho:** Tất cả loại hàng (MATERIAL, CUP_BLANK, CUP_PRINTED, PACKAGING)
 
+> Tồn đã được **giữ (`reserved`) từ lúc chốt đơn** ở kho được phân bổ (ưu tiên CENTRAL). Khâu này chỉ hiện thực hóa: lấy hàng & trừ tồn thật.
+
 ### Luồng chính
 
 1. Hệ thống sinh phiếu xuất kho từ đơn hàng đã xác nhận
@@ -119,7 +121,7 @@
 3. Hệ thống hiển thị vị trí (Zone/Rack/Shelf) của từng mặt hàng
 4. PICKER tới vị trí gợi ý → **quét barcode SKU + quét shelf** để xác nhận đúng món, đúng chỗ *(quét sai → cảnh báo)*
 5. PICKER chuẩn bị hàng, đóng gói
-6. PICKER xác nhận xuất kho → hệ thống trừ tồn kho
+6. PICKER xác nhận xuất kho → `InventoryStock` (shelf) `−=`, `StockBalance.onHand −=` và `reserved −=` *(available không đổi)*
 6. Trạng thái đơn hàng cập nhật → `Đã xuất kho`
 
 ---
