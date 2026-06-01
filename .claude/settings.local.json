@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//home/hoaiphuong/code/wms-ecom/**)",
+      "Read(//home/hoaiphuong/code/**)",
+      "Bash(mkdir -p /home/hoaiphuong/code/wms-ecom/docs/overview /home/hoaiphuong/code/wms-ecom/docs/warehouse /home/hoaiphuong/code/wms-ecom/docs/auth /home/hoaiphuong/code/wms-ecom/docs/order /home/hoaiphuong/code/wms-ecom/docs/supplier /home/hoaiphuong/code/wms-ecom/docs/shipping /home/hoaiphuong/code/wms-ecom/docs/report)"
+    ],
+    "additionalDirectories": [
+      "/home/hoaiphuong/code/wms-ecom/docs"
+    ]
+  }
+}
