@@ -164,6 +164,11 @@ Warehouse → Zone → Rack → Shelf
 
 > Đối soát: `StockBalance.onHand = Σ StockMovement.quantity` (theo item+kho, các type ảnh hưởng onHand). Thẻ kho 1 SKU = lọc theo `itemId` sắp xếp `createdAt`.
 
+> **Giao dịch đổi chỗ sinh 2 bút toán** (cùng `refId`, lệch dấu — đối soát onHand net = 0, nhưng InventoryStock 2 shelf đều đúng):
+> - **Put-away:** `PUTAWAY −qty` tại shelf staging + `PUTAWAY +qty` tại shelf thật.
+> - **Chuyển kho:** `TRANSFER_OUT −qty` (shelf kho nguồn) + `TRANSFER_IN +qty` (shelf kho đích).
+> Đối soát **lớp 2** theo từng shelf: `InventoryStock.quantity = Σ StockMovement.quantity` lọc theo `itemId + shelfId (+ lotId)`.
+
 ---
 
 ## Nhóm 4: Giao dịch kho
@@ -287,7 +292,7 @@ Warehouse → Zone → Rack → Shelf
 |---|---|---|
 | id | ObjectId | |
 | orderId | ObjectId | Đơn hàng |
-| warehouseId | ObjectId | Kho xuất |
+| warehouseId | ObjectId | Kho xuất — **phải = kho đã giữ tồn lúc chốt đơn** (`order.fulfillWarehouseId`, xem [data-ownership](../overview/data-ownership.md#phân-bổ-kho-khi-chốt-đơn-1-kho-đơn--chưa-split)) |
 | issueDate | DateTime | |
 | status | Enum | `DRAFT` / `CONFIRMED` |
 | note | String | |
