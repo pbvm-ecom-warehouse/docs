@@ -1,8 +1,14 @@
 # WMS — Thiết kế Phân quyền & SKU/Variant
 
 > Ngày: 2026-06-01
-> Trạng thái: Spec — chờ review trước khi viết plan
+> Trạng thái: ⚠️ **SUPERSEDED** — spec lịch sử, đã được hiện thực & mở rộng trong `docs/`. Giữ lại để truy vết quyết định.
 > Phạm vi: tài liệu (`docs/`) + mô hình dữ liệu WMS
+
+> **Đã lỗi thời so với tài liệu hiện tại — đọc `docs/` mới là nguồn đúng:**
+> - **`variantId` → `itemId`:** WMS dùng `WarehouseItem` (không phải `ProductVariant`). Phần 2 dưới đây mô tả `Product`/`ProductVariant` là mô hình **Ecommerce**; bên WMS đã tách thành `WarehouseItem`. Xem [data-ownership.md](../../overview/data-ownership.md).
+> - **`price`:** giá thuộc Ecommerce, `WarehouseItem` **không có giá**. Mục 2.2 "Giữ: price" chỉ đúng cho phía Ecommerce.
+> - **Lô/hạn dùng:** out-of-scope ở mục "YAGNI" bên dưới đã bị **đảo** — docs hiện **đã có** Lot/FEFO/UC-08 Scrap.
+> - **SKU CUP_PRINTED:** chốt lại là **per-design** (đảo so với YAGNI bên dưới) — xem [use-cases.md UC-04](../../warehouse/use-cases.md#uc-04-lệnh-in-ly-make-to-order).
 
 ## Bối cảnh
 

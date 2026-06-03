@@ -47,6 +47,9 @@ MANAGER                    RECEIVER                  Hệ thống
    |                          |                    Lưu vị trí tồn kho
 ```
 
+> **Put-away kích hoạt ngay khi GRN `CONFIRMED`** (đã cộng `onHand`, hàng sellable). MANAGER duyệt (`APPROVED`) là bước **audit**, có thể chạy **song song** với put-away — không chặn put-away. Sơ đồ vẽ tuần tự cho gọn.
+> GRN `CONFIRMED` cũng cập nhật trạng thái PO (`PARTIALLY_RECEIVED`/`COMPLETED`).
+
 ---
 
 ## WF-02: Lệnh in ly theo đơn hàng (UC-04)
@@ -55,19 +58,23 @@ MANAGER                    RECEIVER                  Hệ thống
 MANAGER                    PRINTER                   Hệ thống
    |                          |                           |
    |-- Tạo Print Job -------->|                    Kiểm tồn CUP_BLANK
-   |   (loại ly, qty, design) |                    Nếu đủ: tiếp tục
-   |                          |                    Nếu thiếu: cảnh báo
+   |   (ly nền, design→SKU,   |                    Nếu đủ: GIỮ (reserved) blank
+   |    qty)                   |                    Nếu thiếu: cảnh báo
+   |                          |                    Job → PENDING
    |                          |                           |
-   |                          |                    Trừ tồn CUP_BLANK
+   |                          |-- Quét SKU+shelf, in --->|
+   |                          |                    Trừ thật CUP_BLANK
+   |                          |                    (onHand−, reserved−)
    |                          |                    Job → IN_PROGRESS
-   |                          |                           |
-   |       [ Thực hiện in ]                               |
    |                          |                           |
    |                          |-- Xác nhận in xong ------>|
    |                          |   Nhập CUP_PRINTED        |
    |                          |                    Cộng tồn CUP_PRINTED
+   |                          |                    (SKU per-design)
    |                          |                    Job → COMPLETED
 ```
+
+> Nếu design đã có tồn CUP_PRINTED đủ → reserve thẳng ly in, **bỏ qua** lệnh in (xem UC-04). Hủy lệnh khi `PENDING` → giải phóng reserved ly trắng.
 
 ---
 

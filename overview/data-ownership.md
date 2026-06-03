@@ -54,6 +54,8 @@ type: CUP_BLANK                images: ["img1.jpg", "img2.jpg"]
 
 Ecommerce không đọc tồn của WMS. WMS push event mỗi khi **`available` đổi** (`available = StockBalance.onHand − reserved − expired`) → Ecommerce tự cập nhật `availableQty` trong domain của mình. *(Lô hết hạn rơi vào `expired` → tự loại khỏi hàng bán.)*
 
+> **`availableQty` là tổng gộp mọi kho** của một SKU (`Σ available` trên các kho). Ecommerce không phân biệt kho khi bán; việc chọn kho xuất xảy ra lúc chốt đơn (xem [Chống oversell](#chống-oversell-khi-xác-nhận-đơn)). Do gộp tổng nên **chuyển kho nội bộ net = 0 → không bắn event**.
+
 ### Luồng sync
 
 ```
@@ -94,7 +96,7 @@ export class StockProcessor {
 
 | Event | Từ | Đến | Khi nào |
 |---|---|---|---|
-| `stock.changed` | WMS | Ecommerce | **Khi `available` đổi**: nhập kho (GRN), giữ hàng khi chốt đơn, hủy đơn, kiểm kho điều chỉnh, chuyển kho, in ly (CUP_BLANK↓/CUP_PRINTED↑), scrap, hoàn hàng. *(Put-away & lúc pick-xuất KHÔNG đổi available → không bắn)* |
+| `stock.changed` | WMS | Ecommerce | **Khi `available` (tổng gộp mọi kho) đổi**: nhập kho (GRN), giữ hàng khi chốt đơn, hủy đơn, kiểm kho điều chỉnh, in ly (CUP_BLANK↓/CUP_PRINTED↑), hoàn hàng. *(KHÔNG bắn khi: put-away, pick-xuất, **scrap** — available không đổi vì hàng hết hạn vốn đã ngoài available; **chuyển kho nội bộ** — net tổng = 0)* |
 | `order.confirmed` | Ecommerce | WMS | Khách đặt hàng và thanh toán xong → WMS giữ tồn (`reserved += qty`) |
 | `order.cancelled` | Ecommerce | WMS | Hủy đơn trước khi xuất → WMS trả tồn (`reserved −= qty`, available tăng) |
 | `order.returned` | Ecommerce | WMS | Khách trả hàng → WMS mở phiếu hoàn (UC-09), nhập lại hàng tốt |
@@ -145,3 +147,8 @@ Khi **chốt đơn**, phải giữ tồn **atomic** trên nguồn thật `wms_db
 > Giữ tồn ở **lớp tổng** (`stock_balances`), chưa cần biết shelf — PICKER chọn vị trí lấy sau ở khâu xuất kho.
 
 > Hai khách mua đồng thời ly cuối → chỉ 1 transaction commit được → **không bao giờ oversell**. Đây chính là lợi thế của monolith cùng cluster; nếu tách 2 MongoDB server riêng (microservices) thì mới phải dùng Saga.
+
+### Phân bổ kho khi chốt đơn (1 kho/đơn — chưa split)
+
+- Đơn được giữ tồn ở **một kho duy nhất** có `available ≥ qty` (ưu tiên `CENTRAL`). Kho được chọn phải **lưu lại trên đơn** (vd `order.fulfillWarehouseId`) để GoodsIssue (UC-05) xuất đúng kho đã giữ.
+- **Chưa hỗ trợ split đa kho:** nếu không kho đơn lẻ nào đủ hàng — dù **tổng** mọi kho đủ — đơn bị **từ chối** (báo hết hàng). Khi cần đáp ứng đơn vượt tồn 1 kho, dùng [Chuyển kho (UC-07)](../warehouse/use-cases.md#uc-07-chuyển-kho-stock-transfer) gom hàng về một kho trước.

@@ -52,9 +52,10 @@
 1. RECEIVER tạo GRN — tham chiếu PO tương ứng
 2. **Quét barcode** từng mặt hàng → hệ thống khớp đúng dòng PO/GRN *(quét mã lạ/không thuộc PO → cảnh báo, cho chọn hoặc khai báo item)*
 3. Nhập số lượng thực tế nhận được từng mặt hàng *(có thể lệch với PO)*. Hàng `isPerishable` → nhập thêm **lotNumber + expiryDate** → hệ tạo `Lot`
-4. RECEIVER xác nhận nhận hàng → hệ thống cộng tồn: `StockBalance.onHand +=` và đặt hàng vào **shelf staging** (lớp vị trí) — chờ put-away
-5. MANAGER duyệt GRN
-6. Nếu lệch PO → ghi nhận chênh lệch, xử lý với nhà cung cấp
+4. RECEIVER xác nhận nhận hàng → hệ thống cộng tồn: `StockBalance.onHand +=` và đặt hàng vào **shelf staging** (lớp vị trí) — chờ put-away. *(available tăng → sync Ecommerce, kể cả khi MANAGER chưa duyệt)*
+5. Hệ thống cộng dồn `actualQty` vào PO → cập nhật trạng thái PO: thiếu → `PARTIALLY_RECEIVED`, đủ → `COMPLETED`
+6. MANAGER duyệt GRN *(bước audit — hàng đã sellable từ bước 4; duyệt có thể song song với put-away)*
+7. Nếu lệch PO → ghi nhận chênh lệch, xử lý với nhà cung cấp
 
 ### Trạng thái GRN
 
@@ -69,7 +70,7 @@
 ## UC-03: Put-away — Sắp xếp vào vị trí
 
 **Actor:** RECEIVER  
-**Trigger:** Sau khi GRN được xác nhận  
+**Trigger:** Sau khi GRN **CONFIRMED** (không chờ MANAGER duyệt — duyệt là bước audit song song)  
 **Mục đích:** Ghi nhận vị trí lưu trữ thực tế trong kho (Warehouse → Zone → Rack → Shelf)
 
 ### Luồng chính
@@ -87,15 +88,19 @@
 
 **Actor:** MANAGER tạo lệnh, PRINTER thực hiện  
 **Trigger:** Có đơn hàng khách đặt ly in logo/design riêng  
-**Đặc điểm:** In tại chỗ (in-house), không thuê ngoài
+**Đặc điểm:** In tại chỗ (in-house), không thuê ngoài. **CUP_PRINTED per-design** — mỗi mẫu in là 1 SKU riêng.
+
+> **Đặt hàng ly in (make-to-order) & reserve:** khi khách đặt một design,
+> - Nếu SKU CUP_PRINTED của design đó **đã có tồn** (`available ≥ qty`, vd lần trước in dư) → reserve CUP_PRINTED như hàng thường, **không cần lệnh in**.
+> - Nếu **không đủ** → reserve phần thiếu trên **CUP_BLANK** đầu vào và mở **PrintJob** (make-to-order) để in bù. Ràng buộc chống oversell ở đây là **tồn ly trắng**, không phải ly in.
 
 ### Luồng chính
 
-1. MANAGER tạo lệnh in — chọn loại ly (CUP_BLANK), số lượng, file design, tham chiếu đơn hàng
-2. Hệ thống kiểm tra tồn kho CUP_BLANK có đủ không
-3. Xuất CUP_BLANK khỏi kho → đưa vào máy in *(hệ thống trừ tồn CUP_BLANK)*
+1. MANAGER tạo lệnh in — chọn ly nền (CUP_BLANK), design (→ SKU CUP_PRINTED đầu ra, tạo mới item nếu design chưa có), số lượng, file design, tham chiếu đơn hàng
+2. Hệ thống kiểm tra tồn CUP_BLANK đủ không → **giữ (`reserved`) CUP_BLANK** cho lệnh in (PENDING)
+3. Bắt đầu in: PRINTER **quét barcode SKU + quét shelf** lấy CUP_BLANK → hệ trừ tồn thật `CUP_BLANK onHand−=, reserved−=` (`PRINT_CONSUME`), Job → `IN_PROGRESS`
 4. In xong → PRINTER xác nhận nhập kho CUP_PRINTED *(hệ sinh/in tem barcode cho item CUP_PRINTED để put-away như hàng thường)*
-5. Hệ thống cộng tồn kho CUP_PRINTED
+5. Hệ thống cộng tồn `CUP_PRINTED onHand+=` (`PRINT_OUTPUT`), Job → `COMPLETED`
 
 ### Trạng thái Print Job
 

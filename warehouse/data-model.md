@@ -115,6 +115,8 @@ Warehouse → Zone → Rack → Shelf
 | minQuantity | Number | Ngưỡng cảnh báo tồn thấp → phát `stock.low` khi `available < minQuantity` |
 
 > `available = onHand − reserved − expired` (tính khi cần, không lưu trùng).
+>
+> **Edge case — không để `available` âm:** một lô đang được tính trong `reserved` mà hết hạn (job chuyển sang `expired`) có thể làm `reserved + expired > onHand`. Khi job đánh dấu lô `EXPIRED`, nếu phần `onHand` còn lại không đủ phủ `reserved`, hệ **giải phóng bớt `reserved`** của các đơn chưa xuất tương ứng (đơn rơi về trạng thái chờ tồn) — đảm bảo `available ≥ 0`.
 
 ### InventoryStock (Lớp 2 — tồn theo vị trí)
 
@@ -151,7 +153,7 @@ Warehouse → Zone → Rack → Shelf
 | id | ObjectId | |
 | itemId | ObjectId | WarehouseItem (SKU) |
 | warehouseId | ObjectId | Kho |
-| shelfId | ObjectId | Vị trí (null với giao dịch mức tổng như reserve) |
+| shelfId | ObjectId | Vị trí shelf của bút toán (mọi `type` đều gắn shelf). *(Reserve/release KHÔNG ghi vào sổ này — chỉ đổi `StockBalance.reserved`, không đổi onHand/vị trí)* |
 | lotId | ObjectId | Lô (null nếu không theo lô) |
 | type | Enum | `RECEIVE` / `PUTAWAY` / `ISSUE` / `TRANSFER_OUT` / `TRANSFER_IN` / `ADJUST` / `SCRAP` / `PRINT_CONSUME` / `PRINT_OUTPUT` |
 | quantity | Number | Số lượng **có dấu** (+ nhập / − xuất) |
@@ -191,6 +193,8 @@ Warehouse → Zone → Rack → Shelf
 | unitPrice | Number | Giá đặt |
 
 > **Quy đổi đơn vị (UoM):** PO/GRN có thể nhập theo đơn vị phụ (thùng, bao...). Khi cộng/trừ tồn, hệ **luôn quy về đơn vị cơ sở**: `baseQty = qty × factor`. `StockBalance`, `InventoryStock`, `StockMovement` đều theo đơn vị cơ sở.
+
+> **Trạng thái PO do GRN cập nhật:** mỗi GRN `CONFIRMED` cộng dồn `actualQty` vào số đã nhận của từng dòng PO. Hệ tự chuyển PO: còn thiếu → `PARTIALLY_RECEIVED`; nhận đủ mọi dòng → `COMPLETED`. PO không tự chuyển 2 trạng thái này (luôn theo GRN).
 
 ---
 
@@ -266,8 +270,14 @@ Warehouse → Zone → Rack → Shelf
 | id | ObjectId | |
 | printJobId | ObjectId | |
 | inputItemId | ObjectId | WarehouseItem CUP_BLANK đầu vào |
-| outputItemId | ObjectId | WarehouseItem CUP_PRINTED đầu ra |
+| outputItemId | ObjectId | WarehouseItem CUP_PRINTED đầu ra — **mỗi design = 1 SKU riêng** (per-design) |
 | quantity | Number | |
+
+> **CUP_PRINTED per-design:** mỗi mẫu in là một `WarehouseItem` CUP_PRINTED riêng (SKU riêng), tồn kho theo từng design. SKU sinh từ ly nền + mã design (vd `CUP-PLA-500-WHT-DSG042`). Khi tạo lệnh in cho design chưa có item → hệ tạo item CUP_PRINTED mới + sinh/in tem barcode.
+
+> **Reserve & hủy lệnh in:**
+> - Khi tạo PrintJob (PENDING) → **giữ (`reserved`) CUP_BLANK đầu vào** để 2 lệnh in không tranh nhau ly trắng. Khi in (`IN_PROGRESS`) → tiêu thụ thật: `CUP_BLANK onHand−=, reserved−=` (`PRINT_CONSUME`); in xong → `CUP_PRINTED onHand+=` (`PRINT_OUTPUT`).
+> - `CANCELLED` **trước** khi in → giải phóng `reserved` CUP_BLANK. `CANCELLED` **sau** khi đã tiêu thụ → ly trắng đã mất; ly đã in (nếu có) nhập kho bình thường, không tự hoàn ly trắng.
 
 ---
 
