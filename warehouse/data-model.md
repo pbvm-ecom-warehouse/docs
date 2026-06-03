@@ -141,6 +141,26 @@ Warehouse → Zone → Rack → Shelf
 | receivedDate | Date | Ngày nhập lô |
 | status | Enum | `ACTIVE` / `EXPIRED` *(job định kỳ chuyển khi tới hạn)* |
 
+### StockMovement (Sổ cái di chuyển — thẻ kho)
+
+> **Append-only.** Ghi **mọi** thay đổi tồn vật lý (onHand & vị trí) — là **nguồn sự thật** để đối soát 2 lớp tồn, truy vết khi lệch, và sinh thẻ kho/báo cáo. Không sửa/xóa, chỉ thêm.
+
+| Field | Type | Mô tả |
+|---|---|---|
+| id | ObjectId | |
+| itemId | ObjectId | WarehouseItem (SKU) |
+| warehouseId | ObjectId | Kho |
+| shelfId | ObjectId | Vị trí (null với giao dịch mức tổng như reserve) |
+| lotId | ObjectId | Lô (null nếu không theo lô) |
+| type | Enum | `RECEIVE` / `PUTAWAY` / `ISSUE` / `TRANSFER_OUT` / `TRANSFER_IN` / `ADJUST` / `SCRAP` / `PRINT_CONSUME` / `PRINT_OUTPUT` |
+| quantity | Number | Số lượng **có dấu** (+ nhập / − xuất) |
+| refType | String | Loại chứng từ nguồn: `GRN` / `PutAway` / `GoodsIssue` / `StockTransfer` / `StockCount` / `ScrapNote` / `PrintJob` |
+| refId | ObjectId | ID chứng từ nguồn |
+| createdBy | ObjectId | Người thao tác |
+| createdAt | DateTime | Thời điểm (bất biến) |
+
+> Đối soát: `StockBalance.onHand = Σ StockMovement.quantity` (theo item+kho, các type ảnh hưởng onHand). Thẻ kho 1 SKU = lọc theo `itemId` sắp xếp `createdAt`.
+
 ---
 
 ## Nhóm 4: Giao dịch kho
@@ -347,3 +367,38 @@ Warehouse → Zone → Rack → Shelf
 | shelfId | ObjectId | Lấy giảm từ shelf nào |
 | quantity | Number | |
 | reason | Enum/String | Hết hạn / vỡ / ẩm mốc / khác |
+
+---
+
+## Nhóm 5: Nhà cung cấp & Người dùng
+
+### Supplier (Nhà cung cấp — UC-01)
+
+> Đích của `PurchaseOrder.supplierId`.
+
+| Field | Type | Mô tả |
+|---|---|---|
+| id | ObjectId | |
+| name | String | Tên nhà cung cấp |
+| code | String | Mã NCC (unique) |
+| contactName | String | Người liên hệ |
+| phone | String | |
+| email | String | |
+| address | String | |
+| taxCode | String | Mã số thuế |
+| isActive | Boolean | |
+
+### User (Nhân viên nội bộ WMS — collection `users`)
+
+> Mang `roles[]` đã chốt. RolesGuard kiểm tra giao giữa `roles` và `@Roles(...)`.
+
+| Field | Type | Mô tả |
+|---|---|---|
+| id | ObjectId | |
+| username | String | Đăng nhập (unique) |
+| passwordHash | String | Mật khẩu đã hash |
+| name | String | Họ tên |
+| roles | String[] | Tập role ∈ `ADMIN / MANAGER / RECEIVER / PICKER / PRINTER / COUNTER` |
+| warehouseId | ObjectId | Kho mặc định (tùy chọn) |
+| isActive | Boolean | |
+| createdAt | DateTime | |
