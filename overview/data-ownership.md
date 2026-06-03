@@ -52,7 +52,7 @@ type: CUP_BLANK                images: ["img1.jpg", "img2.jpg"]
 
 ## Sync tồn kho qua Event
 
-Ecommerce không đọc tồn của WMS. WMS push event mỗi khi **`available` đổi** (`available = StockBalance.onHand − reserved`) → Ecommerce tự cập nhật `availableQty` trong domain của mình.
+Ecommerce không đọc tồn của WMS. WMS push event mỗi khi **`available` đổi** (`available = StockBalance.onHand − reserved − expired`) → Ecommerce tự cập nhật `availableQty` trong domain của mình. *(Lô hết hạn rơi vào `expired` → tự loại khỏi hàng bán.)*
 
 ### Luồng sync
 
@@ -97,7 +97,9 @@ export class StockProcessor {
 | `stock.changed` | WMS | Ecommerce | **Khi `available` đổi**: nhập kho (GRN), giữ hàng khi chốt đơn, hủy đơn, kiểm kho điều chỉnh, chuyển kho. *(Put-away & lúc pick-xuất KHÔNG đổi available → không bắn)* |
 | `order.confirmed` | Ecommerce | WMS | Khách đặt hàng và thanh toán xong → WMS giữ tồn (`reserved += qty`) |
 | `goods.issued` | WMS | Ecommerce | Xuất kho xong → cập nhật trạng thái đơn *(không trừ available lần nữa — đã trừ lúc chốt đơn)* |
-| `stock.low` | WMS | Notification | Tồn kho dưới ngưỡng `minQuantity` |
+| `stock.low` | WMS | Notification | `available < minQuantity` |
+| `stock.near_expiry` | WMS | Notification | Lô còn ≤ `nearExpiryDays` ngày tới hạn (job định kỳ) |
+| `stock.expired` | WMS | Ecommerce | Lô tới hạn → `expired +=`, `available` giảm → cập nhật `availableQty` |
 | `payment.success` | Ecommerce | Notification | Thanh toán thành công → email xác nhận |
 | `goods.issued` | WMS | Notification | Hàng xuất kho → thông báo giao hàng |
 

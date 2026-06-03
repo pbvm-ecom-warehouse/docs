@@ -17,6 +17,8 @@ Khách hàng  ←  [UC-05 Xuất kho]  ←  Kho
 
 > **Định danh bằng barcode:** ở các bước chạm hàng vật lý — nhận hàng (WF-01 GRN), put-away, xuất kho (WF-03), chuyển kho (WF-05) — thao tác chuẩn là **quét barcode SKU + quét barcode vị trí (shelf)** rồi mới xác nhận. Hệ tự khớp dòng chứng từ; quét sai item/vị trí hoặc lệch qty → cảnh báo.
 
+> **Lô & hạn dùng (hàng `isPerishable`):** GRN nhập **lotNumber + expiryDate**; xuất kho gợi ý **FEFO** (lô hết hạn sớm nhất trước, cho ghi đè). Job định kỳ đánh dấu lô tới hạn → loại khỏi `available`, chờ **hủy hàng (UC-08 Scrap)**.
+
 ---
 
 ## WF-01: Nhập hàng từ nhà cung cấp (UC-01 + UC-02 + UC-03)

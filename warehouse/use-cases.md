@@ -11,6 +11,7 @@
 | UC-05 | Xuất kho theo đơn hàng | PICKER | 🔄 Đang phân tích |
 | UC-06 | Kiểm kho & Điều chỉnh tồn | COUNTER + MANAGER | 🔄 Đang phân tích |
 | UC-07 | Chuyển kho (Stock Transfer) | MANAGER + PICKER + RECEIVER | 🔄 Đang phân tích |
+| UC-08 | Hủy hàng hết hạn/hỏng (Scrap) | COUNTER/RECEIVER đề xuất, MANAGER duyệt | 🔄 Đang phân tích |
 
 ---
 
@@ -49,7 +50,7 @@
 
 1. RECEIVER tạo GRN — tham chiếu PO tương ứng
 2. **Quét barcode** từng mặt hàng → hệ thống khớp đúng dòng PO/GRN *(quét mã lạ/không thuộc PO → cảnh báo, cho chọn hoặc khai báo item)*
-3. Nhập số lượng thực tế nhận được từng mặt hàng *(có thể lệch với PO)*
+3. Nhập số lượng thực tế nhận được từng mặt hàng *(có thể lệch với PO)*. Hàng `isPerishable` → nhập thêm **lotNumber + expiryDate** → hệ tạo `Lot`
 4. RECEIVER xác nhận nhận hàng → hệ thống cộng tồn: `StockBalance.onHand +=` và đặt hàng vào **shelf staging** (lớp vị trí) — chờ put-away
 5. MANAGER duyệt GRN
 5. Nếu lệch PO → ghi nhận chênh lệch, xử lý với nhà cung cấp
@@ -118,7 +119,7 @@
 
 1. Hệ thống sinh phiếu xuất kho từ đơn hàng đã xác nhận
 2. Kiểm tra tồn kho từng mặt hàng — cảnh báo nếu không đủ
-3. Hệ thống hiển thị vị trí (Zone/Rack/Shelf) của từng mặt hàng
+3. Hệ thống hiển thị vị trí (Zone/Rack/Shelf) của từng mặt hàng. Hàng `isPerishable` → **gợi ý lô hết hạn sớm nhất (FEFO)**; PICKER được chọn lô khác (ghi đè). Lô đã `EXPIRED` không được xuất bán
 4. PICKER tới vị trí gợi ý → **quét barcode SKU + quét shelf** để xác nhận đúng món, đúng chỗ *(quét sai → cảnh báo)*
 5. PICKER chuẩn bị hàng, đóng gói
 6. PICKER xác nhận xuất kho → `InventoryStock` (shelf) `−=`, `StockBalance.onHand −=` và `reserved −=` *(available không đổi)*
@@ -165,3 +166,26 @@
 | `IN_TRANSIT` | Hàng đang trên đường chuyển |
 | `COMPLETED` | Đã nhận tại kho đích |
 | `CANCELLED` | Hủy lệnh chuyển |
+
+---
+
+## UC-08: Hủy hàng hết hạn/hỏng (Scrap)
+
+**Actor:** COUNTER/RECEIVER đề xuất, MANAGER duyệt  
+**Trigger:** Lô hết hạn (job tự đánh dấu `EXPIRED`) hoặc phát hiện hàng hỏng/vỡ  
+**Mục đích:** Ghi giảm tồn hợp lệ, có lý do — không để hàng không bán được nằm trong `available`
+
+### Luồng chính
+
+1. Hệ thống liệt kê lô `EXPIRED` (và phần `expired` trong StockBalance) hoặc người vận hành tạo đề xuất hủy hàng hỏng
+2. Chọn item/lô + số lượng + **lý do** (hết hạn, vỡ, ẩm mốc...)
+3. MANAGER duyệt
+4. Hệ thống: `InventoryStock` (shelf+lô) `−=`, `StockBalance.onHand −=` và `expired −=` *(available không đổi — hàng hết hạn vốn đã ngoài available)*
+
+### Trạng thái Scrap
+
+| Status | Mô tả |
+|---|---|
+| `DRAFT` | Đề xuất hủy |
+| `APPROVED` | MANAGER duyệt, đã ghi giảm tồn |
+| `REJECTED` | Không duyệt |

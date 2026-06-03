@@ -66,6 +66,8 @@ Warehouse → Zone → Rack → Shelf
 | type | Enum | `MATERIAL` / `CUP_BLANK` / `CUP_PRINTED` / `PACKAGING` |
 | unit | String | Đơn vị tính (kg, lít, cái, thùng, cuộn...) |
 | attributes | Array | Danh sách thuộc tính: `[{ name, value, code }]` |
+| isPerishable | Boolean | Theo dõi lô/hạn dùng? Mặc định `true` nếu `type = MATERIAL` |
+| nearExpiryDays | Number | Báo cận hạn trước bao nhiêu ngày (vd 7) — chỉ dùng khi `isPerishable` |
 | isActive | Boolean | |
 
 > **Định danh vật lý:** quét `barcode` (hoặc `altBarcodes`) → tra ra đúng `WarehouseItem`. Quét mã chưa có trong hệ → **chặn**, yêu cầu khai báo item trước (không cho tồn kho "mồ côi").
@@ -93,7 +95,7 @@ Warehouse → Zone → Rack → Shelf
 > Tồn kho tách **2 lớp** với bất biến luôn đúng:
 > ```
 > StockBalance.onHand (lớp 1)  =  Σ InventoryStock.quantity mọi shelf của kho đó (lớp 2, gồm staging)
-> available                    =  onHand − reserved
+> available                    =  onHand − reserved − expired
 > ```
 > Mọi thay đổi tồn cập nhật **cả 2 lớp trong cùng transaction**.
 
@@ -108,9 +110,10 @@ Warehouse → Zone → Rack → Shelf
 | warehouseId | ObjectId | Kho |
 | onHand | Number | Tổng vật lý đang có (gồm cả hàng chưa put-away ở staging) |
 | reserved | Number | Đã giữ cho đơn/print job, chưa xuất |
+| expired | Number | Tồn thuộc lô **đã hết hạn** — còn vật lý nhưng không bán được, chờ scrap |
 | minQuantity | Number | Ngưỡng cảnh báo tồn thấp → phát `stock.low` khi `available < minQuantity` |
 
-> `available = onHand − reserved` (tính khi cần, không lưu trùng).
+> `available = onHand − reserved − expired` (tính khi cần, không lưu trùng).
 
 ### InventoryStock (Lớp 2 — tồn theo vị trí)
 
@@ -122,7 +125,21 @@ Warehouse → Zone → Rack → Shelf
 | itemId | ObjectId | WarehouseItem (SKU) |
 | warehouseId | ObjectId | Kho chứa |
 | shelfId | ObjectId | Vị trí shelf cụ thể (gồm cả shelf staging) |
-| quantity | Number | Số lượng tại shelf này |
+| lotId | ObjectId | Lô hàng — **null** nếu item không `isPerishable` |
+| quantity | Number | Số lượng tại shelf + lô này |
+
+### Lot (Lô hàng — chỉ cho item `isPerishable`)
+
+> Mỗi lô = một đợt hàng có cùng hạn dùng. Tồn theo lô nằm ở lớp 2 (`InventoryStock.lotId`); lớp 1 (`StockBalance`) chỉ tính tổng, không theo lô.
+
+| Field | Type | Mô tả |
+|---|---|---|
+| id | ObjectId | |
+| itemId | ObjectId | WarehouseItem |
+| lotNumber | String | Mã lô (từ NCC hoặc hệ sinh) — unique theo `itemId` |
+| expiryDate | Date | Hạn dùng — cơ sở cho FEFO & cảnh báo |
+| receivedDate | Date | Ngày nhập lô |
+| status | Enum | `ACTIVE` / `EXPIRED` *(job định kỳ chuyển khi tới hạn)* |
 
 ---
 
@@ -305,3 +322,28 @@ Warehouse → Zone → Rack → Shelf
 | quantity | Number | |
 | fromShelfId | ObjectId | Lấy từ shelf nào |
 | toShelfId | ObjectId | Đặt vào shelf nào tại kho đích |
+
+---
+
+### ScrapNote (Phiếu hủy hàng — UC-08)
+
+| Field | Type | Mô tả |
+|---|---|---|
+| id | ObjectId | |
+| warehouseId | ObjectId | Kho |
+| status | Enum | `DRAFT` / `APPROVED` / `REJECTED` |
+| note | String | |
+| createdBy | ObjectId | COUNTER/RECEIVER đề xuất |
+| approvedBy | ObjectId | MANAGER |
+
+### ScrapNoteItem
+
+| Field | Type | Mô tả |
+|---|---|---|
+| id | ObjectId | |
+| scrapNoteId | ObjectId | |
+| itemId | ObjectId | |
+| lotId | ObjectId | Lô bị hủy (null nếu không theo lô) |
+| shelfId | ObjectId | Lấy giảm từ shelf nào |
+| quantity | Number | |
+| reason | Enum/String | Hết hạn / vỡ / ẩm mốc / khác |
