@@ -155,7 +155,7 @@ Warehouse → Zone → Rack → Shelf
 | lotId | ObjectId | Lô (null nếu không theo lô) |
 | type | Enum | `RECEIVE` / `PUTAWAY` / `ISSUE` / `TRANSFER_OUT` / `TRANSFER_IN` / `ADJUST` / `SCRAP` / `PRINT_CONSUME` / `PRINT_OUTPUT` |
 | quantity | Number | Số lượng **có dấu** (+ nhập / − xuất) |
-| refType | String | Loại chứng từ nguồn: `GRN` / `PutAway` / `GoodsIssue` / `StockTransfer` / `StockCount` / `ScrapNote` / `PrintJob` |
+| refType | String | Loại chứng từ nguồn: `GRN` / `PutAway` / `GoodsIssue` / `StockTransfer` / `StockCount` / `ScrapNote` / `PrintJob` / `GoodsReturn` |
 | refId | ObjectId | ID chứng từ nguồn |
 | createdBy | ObjectId | Người thao tác |
 | createdAt | DateTime | Thời điểm (bất biến) |
@@ -216,7 +216,9 @@ Warehouse → Zone → Rack → Shelf
 | itemId | ObjectId | |
 | expectedQty | Number | Số lượng theo PO |
 | actualQty | Number | Số lượng thực tế nhận |
-| unit | String | |
+| unit | String | Đơn vị nhập (có thể là đơn vị phụ → quy về cơ sở) |
+| lotNumber | String | Mã lô (nếu `isPerishable`) → hệ tạo `Lot` |
+| expiryDate | Date | Hạn dùng (nếu `isPerishable`) |
 | note | String | Ghi chú nếu lệch |
 
 ---
@@ -238,6 +240,7 @@ Warehouse → Zone → Rack → Shelf
 | id | ObjectId | |
 | putAwayTaskId | ObjectId | |
 | itemId | ObjectId | |
+| lotId | ObjectId | Lô được xếp (null nếu không `isPerishable`) |
 | quantity | Number | |
 | shelfId | ObjectId | Vị trí chỉ định |
 
@@ -287,9 +290,10 @@ Warehouse → Zone → Rack → Shelf
 | id | ObjectId | |
 | goodsIssueId | ObjectId | |
 | itemId | ObjectId | |
+| lotId | ObjectId | Lô được lấy theo FEFO (null nếu không `isPerishable`) |
 | quantity | Number | |
 | shelfId | ObjectId | Lấy từ shelf nào |
-| unit | String | |
+| unit | String | Đơn vị cơ sở |
 
 ---
 
@@ -315,6 +319,7 @@ Warehouse → Zone → Rack → Shelf
 | stockCountId | ObjectId | |
 | itemId | ObjectId | |
 | shelfId | ObjectId | |
+| lotId | ObjectId | Lô được đếm (null nếu không `isPerishable`) |
 | systemQty | Number | Tồn theo hệ thống |
 | actualQty | Number | Tồn thực tế đếm được |
 | delta | Number | Chênh lệch (actualQty - systemQty) |
@@ -342,6 +347,7 @@ Warehouse → Zone → Rack → Shelf
 | id | ObjectId | |
 | stockTransferId | ObjectId | |
 | itemId | ObjectId | |
+| lotId | ObjectId | Lô được chuyển (null nếu không `isPerishable`) |
 | quantity | Number | |
 | fromShelfId | ObjectId | Lấy từ shelf nào |
 | toShelfId | ObjectId | Đặt vào shelf nào tại kho đích |

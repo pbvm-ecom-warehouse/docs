@@ -94,7 +94,7 @@ export class StockProcessor {
 
 | Event | Từ | Đến | Khi nào |
 |---|---|---|---|
-| `stock.changed` | WMS | Ecommerce | **Khi `available` đổi**: nhập kho (GRN), giữ hàng khi chốt đơn, hủy đơn, kiểm kho điều chỉnh, chuyển kho. *(Put-away & lúc pick-xuất KHÔNG đổi available → không bắn)* |
+| `stock.changed` | WMS | Ecommerce | **Khi `available` đổi**: nhập kho (GRN), giữ hàng khi chốt đơn, hủy đơn, kiểm kho điều chỉnh, chuyển kho, in ly (CUP_BLANK↓/CUP_PRINTED↑), scrap, hoàn hàng. *(Put-away & lúc pick-xuất KHÔNG đổi available → không bắn)* |
 | `order.confirmed` | Ecommerce | WMS | Khách đặt hàng và thanh toán xong → WMS giữ tồn (`reserved += qty`) |
 | `order.cancelled` | Ecommerce | WMS | Hủy đơn trước khi xuất → WMS trả tồn (`reserved −= qty`, available tăng) |
 | `order.returned` | Ecommerce | WMS | Khách trả hàng → WMS mở phiếu hoàn (UC-09), nhập lại hàng tốt |

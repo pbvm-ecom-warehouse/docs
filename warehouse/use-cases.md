@@ -54,7 +54,7 @@
 3. Nhập số lượng thực tế nhận được từng mặt hàng *(có thể lệch với PO)*. Hàng `isPerishable` → nhập thêm **lotNumber + expiryDate** → hệ tạo `Lot`
 4. RECEIVER xác nhận nhận hàng → hệ thống cộng tồn: `StockBalance.onHand +=` và đặt hàng vào **shelf staging** (lớp vị trí) — chờ put-away
 5. MANAGER duyệt GRN
-5. Nếu lệch PO → ghi nhận chênh lệch, xử lý với nhà cung cấp
+6. Nếu lệch PO → ghi nhận chênh lệch, xử lý với nhà cung cấp
 
 ### Trạng thái GRN
 
@@ -124,7 +124,7 @@
 4. PICKER tới vị trí gợi ý → **quét barcode SKU + quét shelf** để xác nhận đúng món, đúng chỗ *(quét sai → cảnh báo)*
 5. PICKER chuẩn bị hàng, đóng gói
 6. PICKER xác nhận xuất kho → `InventoryStock` (shelf) `−=`, `StockBalance.onHand −=` và `reserved −=` *(available không đổi)*
-6. Trạng thái đơn hàng cập nhật → `Đã xuất kho`
+7. Trạng thái đơn hàng cập nhật → `Đã xuất kho`
 
 ---
 
