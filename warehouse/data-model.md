@@ -64,7 +64,8 @@ Warehouse → Zone → Rack → Shelf
 | altBarcodes | String[] | Mã NCC/nhà sản xuất (EAN/UPC sẵn trên hàng) map về cùng item |
 | name | String | Tên nội bộ (VD: Ly nhựa 500ml Đỏ) |
 | type | Enum | `MATERIAL` / `CUP_BLANK` / `CUP_PRINTED` / `PACKAGING` |
-| unit | String | Đơn vị tính (kg, lít, cái, thùng, cuộn...) |
+| unit | String | **Đơn vị cơ sở** — tồn kho luôn lưu & đếm theo đơn vị này (cái, kg, lít...) |
+| altUnits | Array | Đơn vị phụ + hệ số quy đổi: `[{ unit, factor }]` — vd `{thùng, 50}` = 1 thùng = 50 cái |
 | attributes | Array | Danh sách thuộc tính: `[{ name, value, code }]` |
 | isPerishable | Boolean | Theo dõi lô/hạn dùng? Mặc định `true` nếu `type = MATERIAL` |
 | nearExpiryDays | Number | Báo cận hạn trước bao nhiêu ngày (vd 7) — chỉ dùng khi `isPerishable` |
@@ -185,9 +186,11 @@ Warehouse → Zone → Rack → Shelf
 | id | ObjectId | |
 | purchaseOrderId | ObjectId | |
 | itemId | ObjectId | |
-| expectedQty | Number | Số lượng đặt |
-| unit | String | |
+| expectedQty | Number | Số lượng đặt (theo `unit` dưới đây) |
+| unit | String | Đơn vị đặt — có thể là đơn vị phụ (vd `thùng`); hệ quy về cơ sở bằng `altUnits.factor` |
 | unitPrice | Number | Giá đặt |
+
+> **Quy đổi đơn vị (UoM):** PO/GRN có thể nhập theo đơn vị phụ (thùng, bao...). Khi cộng/trừ tồn, hệ **luôn quy về đơn vị cơ sở**: `baseQty = qty × factor`. `StockBalance`, `InventoryStock`, `StockMovement` đều theo đơn vị cơ sở.
 
 ---
 
@@ -367,6 +370,33 @@ Warehouse → Zone → Rack → Shelf
 | shelfId | ObjectId | Lấy giảm từ shelf nào |
 | quantity | Number | |
 | reason | Enum/String | Hết hạn / vỡ / ẩm mốc / khác |
+
+---
+
+### GoodsReturn (Phiếu hoàn hàng — UC-09)
+
+> Khách trả hàng (RMA). RECEIVER kiểm tra → hàng tốt nhập lại kho, hàng hỏng chuyển scrap.
+
+| Field | Type | Mô tả |
+|---|---|---|
+| id | ObjectId | |
+| orderId | ObjectId | Đơn hàng gốc (tham chiếu Ecommerce qua sku/order ref) |
+| warehouseId | ObjectId | Kho nhận hàng trả |
+| status | Enum | `DRAFT` / `INSPECTED` / `RESTOCKED` / `CANCELLED` |
+| note | String | |
+| createdBy | ObjectId | RECEIVER |
+
+### GoodsReturnItem
+
+| Field | Type | Mô tả |
+|---|---|---|
+| id | ObjectId | |
+| goodsReturnId | ObjectId | |
+| itemId | ObjectId | |
+| quantity | Number | |
+| condition | Enum | `GOOD` (nhập lại kho) / `DAMAGED` (chuyển scrap) |
+| shelfId | ObjectId | Vị trí nhập lại (khi `GOOD`) |
+| lotId | ObjectId | Lô (nếu `isPerishable` & còn truy được) |
 
 ---
 

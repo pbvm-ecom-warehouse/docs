@@ -12,6 +12,7 @@
 | UC-06 | Kiểm kho & Điều chỉnh tồn | COUNTER + MANAGER | 🔄 Đang phân tích |
 | UC-07 | Chuyển kho (Stock Transfer) | MANAGER + PICKER + RECEIVER | 🔄 Đang phân tích |
 | UC-08 | Hủy hàng hết hạn/hỏng (Scrap) | COUNTER/RECEIVER đề xuất, MANAGER duyệt | 🔄 Đang phân tích |
+| UC-09 | Hoàn hàng (Return/RMA) | RECEIVER | 🔄 Đang phân tích |
 
 ---
 
@@ -23,7 +24,7 @@
 
 ### Luồng chính
 
-1. MANAGER tạo PO — chọn nhà cung cấp, danh sách hàng, số lượng, giá dự kiến
+1. MANAGER tạo PO — chọn nhà cung cấp, danh sách hàng, số lượng, giá dự kiến *(số lượng có thể nhập theo đơn vị phụ như thùng/bao — hệ quy về đơn vị cơ sở khi nhập kho)*
 2. PO được xác nhận và gửi/thông báo cho nhà cung cấp
 3. Trạng thái PO: `DRAFT` → `CONFIRMED` → `SENT`
 
@@ -189,3 +190,34 @@
 | `DRAFT` | Đề xuất hủy |
 | `APPROVED` | MANAGER duyệt, đã ghi giảm tồn |
 | `REJECTED` | Không duyệt |
+
+---
+
+## UC-09: Hoàn hàng (Return / RMA)
+
+**Actor:** RECEIVER  
+**Trigger:** Khách trả hàng (sự kiện `order.returned` từ Ecommerce hoặc lập tay)  
+**Mục đích:** Nhập lại hàng tốt vào kho, tách hàng hỏng đi hủy
+
+### Luồng chính
+
+1. RECEIVER tạo phiếu hoàn — tham chiếu đơn gốc, quét barcode hàng trả
+2. **Kiểm tra tình trạng** từng món → `GOOD` hoặc `DAMAGED`
+3. Hàng `GOOD` → nhập lại kho (quét shelf): `StockBalance.onHand +=`, `InventoryStock +=` *(available tăng → sync Ecommerce)*
+4. Hàng `DAMAGED` → chuyển sang **UC-08 Scrap** (không nhập kho)
+5. Hàng `isPerishable` → cần lô + hạn còn hợp lệ mới được nhập lại
+
+### Trạng thái GoodsReturn
+
+| Status | Mô tả |
+|---|---|
+| `DRAFT` | Đang lập phiếu |
+| `INSPECTED` | Đã phân loại GOOD/DAMAGED |
+| `RESTOCKED` | Đã nhập lại hàng tốt |
+| `CANCELLED` | Hủy phiếu |
+
+---
+
+## Hủy đơn (release tồn đã giữ)
+
+> Không phải UC độc lập — xử lý qua sự kiện. Khi đơn bị hủy **trước khi xuất kho** (`order.cancelled` từ Ecommerce): WMS trả lại tồn đã giữ — `StockBalance.reserved −=` → `available` tăng → sync Ecommerce. Nếu đơn **đã xuất kho** thì dùng UC-09 (hoàn hàng) thay vì hủy.
