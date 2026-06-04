@@ -21,10 +21,9 @@ NCC → [P0 Nhập: PO→GRN→Put-away]
             │                                         │
             │                              KHÁCH → [P1 Duyệt/Tìm]
             │                                       → [P2 Chi tiết + variant (+design)]
-            │                                       → [P3 Checkout]
-            │ ◀── order.placed ───────────────────── │  reserve ATOMIC (trực tiếp wms_db)
-   reserved += qty                                   │
-            │ stock.changed(−) ──────────▶ availableQty −= qty       │
+            │                                       → [P3 Checkout: reserve ATOMIC in-transaction]
+            │ ◀── order.placed ───────────────────── │  (thông báo thuần — reserved += qty &
+            │                                         │   availableQty −= qty đã làm trong transaction)
             │                                       [P4 Thanh toán]  │
             │                                         │ payment.success ──▶ email xác nhận
             │ ◀── print.requested ───── (chỉ khi có ly-in, đã PAID)
@@ -38,7 +37,7 @@ NCC → [P0 Nhập: PO→GRN→Put-away]
             │ ◀── order.cancelled (trước ISSUED) ── [Hủy]  → release reserve, refund
             │ ◀── order.returned  (sau DELIVERED) ─ [RMA]  → nhập lại / scrap
 ```
-> Mũi tên `◀──` = event Ecom→WMS; `──▶` = event WMS→Ecom/Notification. **Reserve là thao tác atomic checkout làm trực tiếp trên `wms_db`** (cùng cluster) — `order.placed` báo WMS xử lý downstream, `stock.changed(−)` là hệ quả để sync `availableQty`.
+> Mũi tên `◀──` = event Ecom→WMS; `──▶` = event WMS→Ecom/Notification. **Reserve là thao tác atomic checkout làm trong 1 transaction xuyên 2 DB** (reserve `wms_db.stock_balances` + trừ `availableQty` `ecom_db.product_variants`) — `order.placed` là **thông báo thuần**, KHÔNG reserve lại; không bắn `stock.changed` cho reserve.
 
 | Pha | Module | Workflow gốc |
 |---|---|---|
@@ -93,12 +92,12 @@ KHÁCH                  CHECKOUT (order)            WMS (stock_balances)
  |   (COD/ONLINE)           |-- validateStock (copy) ->|
  |                          |-- reserve ATOMIC ------->| reserved += qty (ưu tiên CENTRAL)
  |                          |<-- OK / hết hàng --------|
- |                    Tạo Order{PLACED, UNPAID, NONE}, fulfillWarehouseId
- |                    order.placed ───────────────────>| (báo WMS xử lý downstream)
- |                          |<- stock.changed{sku,−} --| availableQty −= qty (giảm tồn hiển thị)
+ |                    Transaction atomic (xuyên 2 DB):
+ |                      reserved += qty (wms_db) · availableQty −= qty (ecom_db) · tạo Order{PLACED,UNPAID,NONE}
+ |                    fulfillWarehouseId; order.placed ──────>| (thông báo thuần, KHÔNG reserve lại)
  |<-- Đơn đã tạo -----------|
 ```
-> Checkout **tự** reserve atomic trên `wms_db` (cùng cluster) — `order.placed`/`stock.changed(−)` là hệ quả. Reserve **tách khỏi thanh toán**, giữ tồn ngay khi đặt. Fail → rollback, không tạo đơn. [WF-E01](../order/workflow.md#wf-e01-checkout--giữ-tồn).
+> Checkout **tự** reserve atomic xuyên 2 DB (reserve `wms_db` + trừ `availableQty` `ecom_db`) trong 1 transaction — `order.placed` là **thông báo thuần**, KHÔNG reserve lại. Reserve **tách khỏi thanh toán**, giữ tồn ngay khi đặt. Fail → rollback, không tạo đơn. [WF-E01](../order/workflow.md#wf-e01-checkout--giữ-tồn).
 
 ### P4 — Thanh toán & xác nhận
 
@@ -124,16 +123,16 @@ WMS (PrintJob)          PRINTER                  stock_balances
  | Kiểm tồn CUP_BLANK → GIỮ (reserved) → Job=PENDING    |
  |                          |-- Quét SKU+shelf, in --->| CUP_BLANK onHand−, reserved−
  |                          |-- Xác nhận in xong ----->| CUP_PRINTED onHand+ và reserve cho đơn
- |                    Job=COMPLETED → fulfillment=READY_TO_PICK
+ |                    Job=COMPLETED ── print.completed ──> Ecom: đủ mọi ly-in? → fulfillment=READY_TO_PICK
 ```
 > Hold "chuyển" từ blank sang `CUP_PRINTED` đúng đơn; nếu đã có CUP_PRINTED đủ → bỏ qua in. [WF-02](../warehouse/workflow.md#wf-02-lệnh-in-ly-theo-đơn-hàng-uc-04).
 
 ### P6 — Xuất kho
 
 ```
-ORDER                   PICKER                   WMS
+ORDER                   WMS / PICKER             stock_balances
  | READY_TO_PICK           |                       |
- |-- Sinh phiếu xuất ----->| Hiển thị vị trí Zone/Rack/Shelf
+ |-- order.ready_to_fulfill ->| WMS sinh GoodsIssue (UC-05)
  |                         |-- Quét + Xác nhận xuất ->| onHand−, reserved− → GoodsIssue=CONFIRMED
  |<-- goods.issued --------| fulfillment=ISSUED
 ```
@@ -156,9 +155,9 @@ WMS/ORDER                SHIPPING                 KHÁCH
 
 ```
 [Hủy đơn] (trước ISSUED; ly-in trước AWAITING_PRINT)
-  KHÁCH → ORDER: order.cancelled → WMS release reserve (available+) → orderStatus=CANCELLED
-                 ONLINE đã PAID → REFUND_PENDING → REFUNDED
-  → stock.changed{+} → Catalog availableQty hồi lại.  [WF-E04]
+  KHÁCH → ORDER: transaction hủy atomic (reserved −= qty `wms_db` + availableQty += qty `ecom_db`)
+                 → order.cancelled (thông báo thuần) → orderStatus=CANCELLED
+                 ONLINE đã PAID → REFUND_PENDING → REFUNDED.  [WF-E04]
 
 [RMA hoàn] (sau DELIVERED, trong 7 ngày)
   KHÁCH → ORDER: order.returned → WMS (UC-09): hàng tốt→nhập lại / hỏng→scrap
@@ -176,10 +175,11 @@ WMS/ORDER                SHIPPING                 KHÁCH
 | Thứ tự | Event | Từ → Đến | Ý nghĩa trong main flow |
 |---|---|---|---|
 | P0 | `stock.changed` (+) | WMS → Ecom | Nhập kho xong → hàng "còn" trên storefront |
-| P3 | `order.placed` | Ecom → WMS | Chốt đơn → reserve atomic (tách khỏi thanh toán) |
-| P3 | `stock.changed` (−) | WMS → Ecom | Giữ tồn → `availableQty` giảm |
+| P3 | `order.placed` | Ecom → WMS | Chốt đơn → **thông báo thuần** (reserve & trừ `availableQty` đã làm atomic in-transaction) |
 | P4 | `payment.success` | Ecom → Notification | Trả tiền OK → email xác nhận |
 | P4 | `print.requested` | Ecom → WMS | Đơn ly-in đã PAID → mở PrintJob |
+| P5 | `print.completed` | WMS → Ecom | In xong → set `printJobId`; đủ mọi ly-in → `READY_TO_PICK` |
+| P6 | `order.ready_to_fulfill` | Ecom → WMS | Đơn `READY_TO_PICK` → WMS sinh GoodsIssue |
 | P6 | `goods.issued` | WMS → Ecom | Xuất kho xong → `fulfillment=ISSUED` (không trừ available lần nữa) |
 | Hủy | `order.cancelled` | Ecom → WMS | Trả tồn (`reserved−`, available+) |
 | RMA | `order.returned` | Ecom → WMS | Mở phiếu hoàn (UC-09) |
@@ -192,8 +192,9 @@ WMS/ORDER                SHIPPING                 KHÁCH
 ## 5. Vòng đồng bộ tồn (luôn chạy nền)
 
 ```
-WMS mọi biến động available (GRN, reserve đơn, hủy, kiểm kho, chuyển kho, in ly, hết hạn)
+WMS biến động available phía kho (GRN, kiểm kho, chuyển kho, in ly, hết hạn)
         │  stock.changed{sku, delta} / stock.expired
+        │  (reserve/hủy lúc checkout do Ecom tự cập nhật in-transaction — không qua đây)
         ▼
 Catalog worker: tìm ProductVariant theo sku → availableQty += delta (clamp hiển thị ≥ 0)
         ▼
