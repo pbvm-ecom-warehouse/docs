@@ -110,7 +110,7 @@ Warehouse → Zone → Rack → Shelf
 | itemId | ObjectId | WarehouseItem (SKU) |
 | warehouseId | ObjectId | Kho |
 | onHand | Number | Tổng vật lý đang có (gồm cả hàng chưa put-away ở staging) |
-| reserved | Number | Đã giữ cho đơn/print job, chưa xuất |
+| reserved | Number | Đã giữ cho đơn / print job / chuyển kho (giữ tại kho nguồn khi `CONFIRMED`), chưa xuất |
 | expired | Number | Tồn thuộc lô **đã hết hạn** — còn vật lý nhưng không bán được, chờ scrap |
 | minQuantity | Number | Ngưỡng cảnh báo tồn thấp → phát `stock.low` khi `available < minQuantity` |
 
@@ -166,7 +166,7 @@ Warehouse → Zone → Rack → Shelf
 
 > **Giao dịch đổi chỗ sinh 2 bút toán** (cùng `refId`, lệch dấu — đối soát onHand net = 0, nhưng InventoryStock 2 shelf đều đúng):
 > - **Put-away:** `PUTAWAY −qty` tại shelf staging + `PUTAWAY +qty` tại shelf thật.
-> - **Chuyển kho:** `TRANSFER_OUT −qty` (shelf kho nguồn) + `TRANSFER_IN +qty` (shelf kho đích).
+> - **Chuyển kho:** `TRANSFER_OUT −qty` (shelf kho nguồn) + `TRANSFER_IN +qty` (shelf kho đích). *(available tổng giảm tạm lúc transit — bắn `stock.changed` delta− khi reserve nguồn lúc CONFIRMED, delta+ khi nhận đích; net trọn vòng = 0.)*
 > Đối soát **lớp 2** theo từng shelf: `InventoryStock.quantity = Σ StockMovement.quantity` lọc theo `itemId + shelfId (+ lotId)`.
 
 ---
@@ -280,8 +280,9 @@ Warehouse → Zone → Rack → Shelf
 
 > **CUP_PRINTED per-design:** mỗi mẫu in là một `WarehouseItem` CUP_PRINTED riêng (SKU riêng), tồn kho theo từng design. SKU sinh từ ly nền + mã design (vd `CUP-PLA-500-WHT-DSG042`). Khi tạo lệnh in cho design chưa có item → hệ tạo item CUP_PRINTED mới + sinh/in tem barcode.
 
-> **Reserve & hủy lệnh in:**
-> - Khi tạo PrintJob (PENDING) → **giữ (`reserved`) CUP_BLANK đầu vào** để 2 lệnh in không tranh nhau ly trắng. Khi in (`IN_PROGRESS`) → tiêu thụ thật: `CUP_BLANK onHand−=, reserved−=` (`PRINT_CONSUME`); in xong → `CUP_PRINTED onHand+=` (`PRINT_OUTPUT`).
+> **Reserve (chuỗi hold blank→printed) & hủy lệnh in:**
+> - Tạo PrintJob từ đơn (PENDING) → **giữ (`reserved`) CUP_BLANK đầu vào 1 lần** (chính là hold của đơn, **không** reserve lại lần nữa). Khi in (`IN_PROGRESS`) → tiêu thụ thật: `CUP_BLANK onHand−=, reserved−=` (`PRINT_CONSUME`).
+> - In xong → `CUP_PRINTED onHand+=` **và `reserved+=` giữ cho đúng đơn** (`PRINT_OUTPUT`) → `available` printed không đổi → **không bắn `stock.changed` cho printed**. UC-05 xuất trên CUP_PRINTED đã reserve như hàng thường. *(Nếu in vào kho không gắn đơn → không reserve → printed `available` tăng → có bắn event.)*
 > - `CANCELLED` **trước** khi in → giải phóng `reserved` CUP_BLANK. `CANCELLED` **sau** khi đã tiêu thụ → ly trắng đã mất; ly đã in (nếu có) nhập kho bình thường, không tự hoàn ly trắng.
 
 ---
@@ -292,7 +293,7 @@ Warehouse → Zone → Rack → Shelf
 |---|---|---|
 | id | ObjectId | |
 | orderId | ObjectId | Đơn hàng |
-| warehouseId | ObjectId | Kho xuất — **phải = kho đã giữ tồn lúc chốt đơn** (`order.fulfillWarehouseId`, xem [data-ownership](../overview/data-ownership.md#phân-bổ-kho-khi-chốt-đơn-1-kho-đơn--chưa-split)) |
+| warehouseId | ObjectId | Kho xuất — **phải = kho đã giữ tồn lúc chốt đơn** (`order.fulfillWarehouseId`, xem [data-ownership](../overview/data-ownership.md#phân-bổ-kho-khi-chốt-đơn-chưa-hỗ-trợ-split-đa-kho)) |
 | issueDate | DateTime | |
 | status | Enum | `DRAFT` / `CONFIRMED` |
 | note | String | |

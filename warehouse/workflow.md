@@ -70,11 +70,12 @@ MANAGER                    PRINTER                   Hệ thống
    |                          |-- Xác nhận in xong ------>|
    |                          |   Nhập CUP_PRINTED        |
    |                          |                    Cộng tồn CUP_PRINTED
+   |                          |                    + reserve cho đơn
    |                          |                    (SKU per-design)
    |                          |                    Job → COMPLETED
 ```
 
-> Nếu design đã có tồn CUP_PRINTED đủ → reserve thẳng ly in, **bỏ qua** lệnh in (xem UC-04). Hủy lệnh khi `PENDING` → giải phóng reserved ly trắng.
+> **Chuỗi hold (UC-04):** mở lệnh in = giữ blank **1 lần** (không reserve trùng với đơn); in xong **chuyển hold** sang `CUP_PRINTED.reserved` cho đúng đơn → UC-05 xuất trên printed. Nếu design đã có tồn CUP_PRINTED đủ → reserve thẳng ly in, **bỏ qua** lệnh in. Hủy lệnh khi `PENDING` → giải phóng reserved ly trắng.
 
 ---
 
@@ -125,19 +126,23 @@ MANAGER                    COUNTER                   Hệ thống
 MANAGER                 PICKER / RECEIVER            Hệ thống
    |                          |                           |
    |-- Tạo lệnh chuyển kho -->|                    Kiểm tồn kho nguồn
-   |   (kho nguồn → đích,     |                    Nếu đủ: tiếp tục
+   |   (kho nguồn → đích,     |                    Nếu đủ: reserve nguồn
    |    danh sách hàng)       |                    Transfer → CONFIRMED
+   |                          |                    (event delta−)
    |                          |                           |
    |             [PICKER]     |-- Chuẩn bị tại kho nguồn->|
    |             [PICKER]     |-- Xác nhận xuất --------->|
-   |                          |                    Trừ tồn kho nguồn
+   |                          |                    onHand−, reserved− (OUT)
    |                          |                    Transfer → IN_TRANSIT
    |                          |                           |
    |       [ Vận chuyển đến kho đích ]                    |
    |                          |                           |
    |           [RECEIVER]     |-- Xác nhận nhận tại đích->|
    |           [RECEIVER]     |   Chỉ định vị trí         |
-   |                          |                    Cộng tồn kho đích
+   |                          |                    onHand+ kho đích (IN)
    |                          |                    Transfer → COMPLETED
+   |                          |                    (event delta+)
    |-- Duyệt hoàn tất ------->|                           |
 ```
+
+> **Tồn lúc transit:** available tổng giảm tạm từ `CONFIRMED` (reserve nguồn, event delta−) đến khi nhận đích (`TRANSFER_IN`, event delta+); net trọn vòng = 0. Bước xuất nguồn (`TRANSFER_OUT`) chỉ đổi onHand/vị trí, available không đổi.

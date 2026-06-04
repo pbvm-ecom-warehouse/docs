@@ -90,17 +90,18 @@
 **Trigger:** Có đơn hàng khách đặt ly in logo/design riêng  
 **Đặc điểm:** In tại chỗ (in-house), không thuê ngoài. **CUP_PRINTED per-design** — mỗi mẫu in là 1 SKU riêng.
 
-> **Đặt hàng ly in (make-to-order) & reserve:** khi khách đặt một design,
+> **Đặt hàng ly in (make-to-order) & reserve — chuỗi hold `reserved`:** khi khách đặt một design,
 > - Nếu SKU CUP_PRINTED của design đó **đã có tồn** (`available ≥ qty`, vd lần trước in dư) → reserve CUP_PRINTED như hàng thường, **không cần lệnh in**.
-> - Nếu **không đủ** → reserve phần thiếu trên **CUP_BLANK** đầu vào và mở **PrintJob** (make-to-order) để in bù. Ràng buộc chống oversell ở đây là **tồn ly trắng**, không phải ly in.
+> - Nếu **thiếu** → mở **PrintJob** (make-to-order); chính việc mở PrintJob **giữ (`reserved`) CUP_BLANK 1 lần** cho phần thiếu — **không reserve lại** (đây là hold của đơn). Ràng buộc chống oversell ở khâu này là **tồn ly trắng**, không phải ly in.
+> - In xong, **hold chuyển** từ CUP_BLANK (đã tiêu thụ) sang **`CUP_PRINTED.reserved` cho đúng đơn** → UC-05 xuất trên printed như hàng thường.
 
 ### Luồng chính
 
 1. MANAGER tạo lệnh in — chọn ly nền (CUP_BLANK), design (→ SKU CUP_PRINTED đầu ra, tạo mới item nếu design chưa có), số lượng, file design, tham chiếu đơn hàng
-2. Hệ thống kiểm tra tồn CUP_BLANK đủ không → **giữ (`reserved`) CUP_BLANK** cho lệnh in (PENDING)
-3. Bắt đầu in: PRINTER **quét barcode SKU + quét shelf** lấy CUP_BLANK → hệ trừ tồn thật `CUP_BLANK onHand−=, reserved−=` (`PRINT_CONSUME`), Job → `IN_PROGRESS`
+2. Hệ thống kiểm tra tồn CUP_BLANK đủ không → **giữ (`reserved`) CUP_BLANK** cho lệnh in 1 lần (PENDING) *(blank `available` giảm → bắn `stock.changed` cho blank)*
+3. Bắt đầu in: PRINTER **quét barcode SKU + quét shelf** lấy CUP_BLANK → hệ trừ tồn thật `CUP_BLANK onHand−=, reserved−=` (`PRINT_CONSUME`), Job → `IN_PROGRESS` *(blank `available` không đổi → không bắn event)*
 4. In xong → PRINTER xác nhận nhập kho CUP_PRINTED *(hệ sinh/in tem barcode cho item CUP_PRINTED để put-away như hàng thường)*
-5. Hệ thống cộng tồn `CUP_PRINTED onHand+=` (`PRINT_OUTPUT`), Job → `COMPLETED`
+5. Hệ thống `CUP_PRINTED onHand+=` **và `reserved+=` giữ cho đúng đơn** (`PRINT_OUTPUT`), Job → `COMPLETED` *(printed `available` không đổi → không bắn event printed; nếu in vào kho không gắn đơn thì không reserve → có bắn)*
 
 ### Trạng thái Print Job
 
@@ -119,7 +120,7 @@
 **Trigger:** Đơn hàng được xác nhận, cần xuất hàng giao cho khách  
 **Áp dụng cho:** Tất cả loại hàng (MATERIAL, CUP_BLANK, CUP_PRINTED, PACKAGING)
 
-> Tồn đã được **giữ (`reserved`) từ lúc chốt đơn** ở kho được phân bổ (ưu tiên CENTRAL). Khâu này chỉ hiện thực hóa: lấy hàng & trừ tồn thật.
+> Tồn đã được **giữ (`reserved`) từ lúc chốt đơn** ở kho được phân bổ (ưu tiên CENTRAL). Khâu này chỉ hiện thực hóa: lấy hàng & trừ tồn thật. *(Với ly-in make-to-order, hold đã **chuyển sang CUP_PRINTED** sau khi in xong (UC-04) → UC-05 xử lý đồng nhất qua `reserved`.)*
 
 ### Luồng chính
 
@@ -157,11 +158,12 @@
 ### Luồng chính
 
 1. MANAGER tạo lệnh chuyển kho — chọn kho nguồn, kho đích, danh sách hàng + số lượng
-2. Hệ thống kiểm tra tồn kho nguồn có đủ không
-3. PICKER chuẩn bị hàng tại kho nguồn → xác nhận xuất
-4. RECEIVER xác nhận hàng đến kho đích → chỉ định vị trí (Zone/Rack/Shelf)
-5. Hệ thống: trừ tồn kho nguồn, cộng tồn kho đích
-6. MANAGER duyệt hoàn tất
+2. Hệ thống kiểm tra tồn kho nguồn đủ không → MANAGER xác nhận (`CONFIRMED`) → **reserve tại kho nguồn** (`reserved += qty`) để không bán phần chờ chuyển *(available nguồn giảm → bắn `stock.changed` delta−)*
+3. PICKER chuẩn bị hàng tại kho nguồn → xác nhận xuất → `onHand−=, reserved−=` tại nguồn (`TRANSFER_OUT`), Transfer → `IN_TRANSIT` *(available không đổi ở bước này — đã giảm từ lúc reserve)*
+4. RECEIVER xác nhận hàng đến kho đích → chỉ định vị trí (Zone/Rack/Shelf) → `onHand+=` tại đích (`TRANSFER_IN`), Transfer → `COMPLETED` *(available đích tăng → bắn `stock.changed` delta+)*
+5. MANAGER duyệt hoàn tất
+
+> **Tồn trong lúc transit:** `available` tổng (gộp mọi kho) **giảm tạm** từ lúc reserve nguồn (`CONFIRMED`) đến khi nhận đích (`TRANSFER_IN`) — phản ánh đúng việc hàng đang trên đường, chưa giao ngay được. Trọn vòng (OUT + IN) net = 0.
 
 ### Trạng thái Transfer
 
