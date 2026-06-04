@@ -51,7 +51,7 @@
 2. Cổng gọi webhook → Payment xử lý **idempotent** theo `providerTxnId` → `Payment.status = SUCCESS`, `Order.paymentStatus = PAID`
 3. `orderStatus → CONFIRMED`
 4. Nếu `hasPrintItems` → phát `print.requested` (WMS mở PrintJob/UC-04) → `fulfillmentStatus = AWAITING_PRINT`; ngược lại → `READY_TO_PICK`
-5. Quá `paymentDeadline` chưa `PAID` → tự phát `order.cancelled` (release reserve) → `orderStatus = CANCELLED`
+5. Quá `paymentDeadline` chưa `PAID` (mặc định ~30 phút, cấu hình được) → tự phát `order.cancelled` (release reserve) → `orderStatus = CANCELLED`. Bao trùm cả case khách trả lỗi/bỏ dở giữa chừng.
 
 ### Luồng chính — COD
 1. Đơn chỉ gồm hàng sẵn (ly-in đã bị chặn ở UC-E02)
