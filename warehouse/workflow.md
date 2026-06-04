@@ -59,7 +59,7 @@ MANAGER                    PRINTER                   Hệ thống
    |                          |                           |
    |-- Tạo Print Job -------->|                    Kiểm tồn CUP_BLANK
    |   (ly nền, design→SKU,   |                    Nếu đủ: GIỮ (reserved) blank
-   |    qty)                   |                    Nếu thiếu: cảnh báo
+   |    qty)                  |                    Nếu thiếu: cảnh báo
    |                          |                    Job → PENDING
    |                          |                           |
    |                          |-- Quét SKU+shelf, in --->|
