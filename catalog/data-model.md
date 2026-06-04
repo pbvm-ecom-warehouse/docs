@@ -80,6 +80,8 @@ Catalog là **consumer** sự kiện tồn từ WMS (cơ chế chung ở [data-o
 
 > Variant không có `sku` khớp item WMS → `availableQty` đứng yên (mặc định 0) → hiện "hết hàng". `availableQty âm` tạm (event lệch thứ tự) → clamp hiển thị về 0. Chốt thật ở **reserve atomic** lúc checkout (xem [Order](../order/data-model.md)).
 
+> **Hai đường cập nhật `availableQty`:** (1) biến động phía WMS → `stock.changed`/`stock.expired` (consumer ở module này); (2) reserve/release lúc checkout/hủy → module **Order** tự trừ/cộng `availableQty` **ngay trong transaction**, không qua event (xem [Order data-model](../order/data-model.md) & [data-ownership](../overview/data-ownership.md#chống-oversell-khi-xác-nhận-đơn)). Hai đường không trùng đếm.
+
 ## Liên kết module Order (`designId`)
 
 `CartItem` và `OrderItem` (module Order) được bổ sung field **`designId?` (ObjectId)** trỏ `designs` khi `isPrintItem`. `designFile` giữ làm **snapshot** file lúc đặt (đề phòng khách xóa design khỏi thư viện sau). Chi tiết xem [Order data-model](../order/data-model.md).

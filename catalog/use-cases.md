@@ -101,3 +101,5 @@
 4. `availableQty` âm tạm (event lệch thứ tự) → clamp hiển thị về 0
 
 > Chi tiết cơ chế sync: [data-ownership](../overview/data-ownership.md#sync-tồn-kho-qua-event).
+
+> **Lưu ý:** consumer này chỉ xử lý **đường WMS-event**. Reserve/release lúc checkout/hủy do module Order tự cập nhật `availableQty` trong transaction, không đi qua worker này.
