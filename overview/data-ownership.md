@@ -21,11 +21,12 @@ WMS sở hữu:                    Ecommerce sở hữu:
 ────────────────────           ──────────────────────
 warehouse_items                products
 inventory_stocks               product_variants
-goods_receipts                 orders
-goods_issues                   customers
-print_jobs                     carts
-stock_transfers                payments
-stock_counts
+goods_receipts                 categories
+goods_issues                   designs
+print_jobs                     orders
+stock_transfers                customers
+stock_counts                   carts
+                               payments
 ```
 
 > **Không bao giờ đọc chéo collection trực tiếp giữa 2 app.**
@@ -107,6 +108,8 @@ export class StockProcessor {
 | `stock.expired` | WMS | Ecommerce | Lô tới hạn → `expired +=`, `available` giảm → cập nhật `availableQty` |
 | `payment.success` | Ecommerce | Notification | Thanh toán thành công → email xác nhận |
 | `goods.issued` | WMS | Notification | Hàng xuất kho → thông báo giao hàng |
+
+> **Catalog là consumer tồn:** `stock.changed` và `stock.expired` được module **Catalog** (Ecommerce) tiêu thụ → cập nhật `ProductVariant.availableQty` (match theo `sku`). Xem [Catalog data-model](../catalog/data-model.md).
 
 ---
 
