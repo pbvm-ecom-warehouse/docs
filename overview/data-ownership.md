@@ -26,7 +26,8 @@ goods_issues                   designs
 print_jobs                     orders
 stock_transfers                customers
 stock_counts                   carts
-                               payments
+suppliers                      payments
+supplier_items
 ```
 
 > **Không bao giờ đọc chéo collection trực tiếp giữa 2 app.**
