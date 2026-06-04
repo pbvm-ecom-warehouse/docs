@@ -14,6 +14,7 @@
 | --------------------------------- | ------------------------------ | --------------------------------------- | ----------------------------------- |
 | [Kho hàng (WMS)](./warehouse/)    | [UC](./warehouse/use-cases.md) | [Data Model](./warehouse/data-model.md) | [Workflow](./warehouse/workflow.md) |
 | [Auth & User](./auth/)            | —                              | —                                       | —                                   |
+| [Catalog (Ecommerce)](./catalog/) | [UC](./catalog/use-cases.md) | [Data Model](./catalog/data-model.md) | [Workflow](./catalog/workflow.md) |
 | [Đơn hàng & E-commerce](./order/) | [UC](./order/use-cases.md)     | [Data Model](./order/data-model.md)     | [Workflow](./order/workflow.md)     |
 | [Nhà cung cấp](./supplier/)       | —                              | —                                       | —                                   |
 | [Vận chuyển](./shipping/)         | —                              | —                                       | —                                   |
