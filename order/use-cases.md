@@ -34,8 +34,8 @@
 1. Khách chọn địa chỉ giao + phương thức thanh toán (`COD`/`ONLINE`)
 2. **Chặn:** đơn có ly-in (`hasPrintItems`) mà chọn `COD` → từ chối, bắt chuyển `ONLINE` (make-to-order phải trả trước)
 3. `validateStock` sơ bộ theo `availableQty`
-4. Hệ chọn kho có `available ≥ qty` (ưu tiên `CENTRAL`) → **reserve ATOMIC** trên `wms_db.stock_balances` trong 1 transaction; lưu `fulfillWarehouseId`
-5. Tạo `Order{orderStatus: PLACED, paymentStatus: UNPAID, fulfillmentStatus: NONE}` + snapshot giá/địa chỉ; phát `order.placed` (WMS đã giữ tồn trong transaction)
+4. Hệ chọn kho có `available ≥ qty` (ưu tiên `CENTRAL`) → **transaction atomic xuyên 2 DB**: `reserved += qty` trên `wms_db.stock_balances` + `availableQty −= qty` trên `ecom_db.product_variants` (Ecom tự trừ bản copy, không qua event); lưu `fulfillWarehouseId`
+5. Tạo `Order{orderStatus: PLACED, paymentStatus: UNPAID, fulfillmentStatus: NONE}` + snapshot giá/địa chỉ; phát `order.placed` (**thông báo thuần** — tồn đã giữ trong transaction, WMS không reserve lại)
 6. Khởi tạo `Payment`
 7. Reserve fail (đua mua món cuối) → rollback, **không tạo đơn**, báo hết hàng
 
@@ -50,12 +50,12 @@
 1. Khách chuyển sang cổng (VNPay/Momo) trả `total`
 2. Cổng gọi webhook → Payment xử lý **idempotent** theo `providerTxnId` → `Payment.status = SUCCESS`, `Order.paymentStatus = PAID`
 3. `orderStatus → CONFIRMED`
-4. Nếu `hasPrintItems` → phát `print.requested` (WMS mở PrintJob/UC-04) → `fulfillmentStatus = AWAITING_PRINT`; ngược lại → `READY_TO_PICK`
+4. Nếu `hasPrintItems` → phát `print.requested` (WMS mở PrintJob/UC-04) → `fulfillmentStatus = AWAITING_PRINT`; ngược lại → `READY_TO_PICK` → phát `order.ready_to_fulfill` (WMS sinh GoodsIssue)
 5. Quá `paymentDeadline` chưa `PAID` (mặc định ~30 phút, cấu hình được) → tự phát `order.cancelled` (release reserve) → `orderStatus = CANCELLED`. Bao trùm cả case khách trả lỗi/bỏ dở giữa chừng.
 
 ### Luồng chính — COD
 1. Đơn chỉ gồm hàng sẵn (ly-in đã bị chặn ở UC-E02)
-2. `orderStatus → CONFIRMED` ngay sau đặt; `fulfillmentStatus = READY_TO_PICK`
+2. `orderStatus → CONFIRMED` ngay sau đặt; `fulfillmentStatus = READY_TO_PICK` → phát `order.ready_to_fulfill` (WMS sinh GoodsIssue)
 3. `paymentStatus` giữ `UNPAID` đến khi `DELIVERED` → `PAID`
 
 ---
@@ -64,11 +64,12 @@
 
 **Actor:** Khách (xem) + Hệ thống
 ### Luồng chính
-1. `READY_TO_PICK` → WMS sinh GoodsIssue (UC-05), xuất kho từ `fulfillWarehouseId`
-2. `goods.issued` (WMS→Ecom) → `fulfillmentStatus = ISSUED`
-3. Shipping (module sau) → `SHIPPED` → `DELIVERED`
-4. `DELIVERED`: nếu COD → `paymentStatus = PAID`; `orderStatus = CLOSED`
-5. Khách tra cứu trạng thái đơn theo 3 trục
+1. **Đơn ly-in:** WMS in xong → phát `print.completed` (mang `printJobId`) → Ecom set `OrderItem.printJobId`; khi **mọi** ly-in của đơn đã in xong → `fulfillmentStatus: AWAITING_PRINT → READY_TO_PICK`
+2. `READY_TO_PICK` → phát `order.ready_to_fulfill` → WMS sinh GoodsIssue (UC-05), xuất kho từ `fulfillWarehouseId`
+3. `goods.issued` (WMS→Ecom) → `fulfillmentStatus = ISSUED`
+4. Shipping (module sau) → `SHIPPED` → `DELIVERED`
+5. `DELIVERED`: nếu COD → `paymentStatus = PAID`; `orderStatus = CLOSED`
+6. Khách tra cứu trạng thái đơn theo 3 trục
 
 ---
 
