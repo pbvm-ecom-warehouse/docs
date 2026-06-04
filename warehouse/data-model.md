@@ -195,7 +195,7 @@ Warehouse → Zone → Rack → Shelf
 | itemId | ObjectId | |
 | expectedQty | Number | Số lượng đặt (theo `unit` dưới đây) |
 | unit | String | Đơn vị đặt — có thể là đơn vị phụ (vd `thùng`); hệ quy về cơ sở bằng `altUnits.factor` |
-| unitPrice | Number | Giá đặt |
+| unitPrice | Number | Giá đặt — **mặc định gợi ý từ [`SupplierItem.purchasePrice`](../supplier/data-model.md#supplieritem-hồ-sơ-mua-hàng--1-dòngsku), sửa tay được** |
 
 > **Quy đổi đơn vị (UoM):** PO/GRN có thể nhập theo đơn vị phụ (thùng, bao...). Khi cộng/trừ tồn, hệ **luôn quy về đơn vị cơ sở**: `baseQty = qty × factor`. `StockBalance`, `InventoryStock`, `StockMovement` đều theo đơn vị cơ sở.
 
@@ -422,23 +422,9 @@ Warehouse → Zone → Rack → Shelf
 
 ---
 
-## Nhóm 5: Nhà cung cấp & Người dùng
+## Nhóm 5: Người dùng
 
-### Supplier (Nhà cung cấp — UC-01)
-
-> Đích của `PurchaseOrder.supplierId`.
-
-| Field | Type | Mô tả |
-|---|---|---|
-| id | ObjectId | |
-| name | String | Tên nhà cung cấp |
-| code | String | Mã NCC (unique) |
-| contactName | String | Người liên hệ |
-| phone | String | |
-| email | String | |
-| address | String | |
-| taxCode | String | Mã số thuế |
-| isActive | Boolean | |
+> **`Supplier` đã tách sang module riêng** — xem [supplier/data-model](../supplier/data-model.md#supplier-nhà-cung-cấp). `PurchaseOrder.supplierId` trỏ tới collection `suppliers` (sở hữu bởi module supplier). Danh mục giá nhập (`SupplierItem`) cũng nằm ở đó.
 
 ### User (Nhân viên nội bộ WMS — collection `users`)
 
