@@ -70,7 +70,7 @@
 | isPrintItem | Boolean | |
 | designFile | String | (khi `isPrintItem`) |
 | designId | ObjectId | Trỏ `designs` (khi `isPrintItem`); `designFile` là snapshot file lúc đặt |
-| printJobId | ObjectId | Tham chiếu PrintJob bên WMS (khi đã mở lệnh in) |
+| printJobId | ObjectId | Tham chiếu PrintJob bên WMS — Ecom set khi nhận `print.completed` (WMS→Ecom) |
 
 ## Nhóm 3: Thanh toán
 
@@ -104,3 +104,5 @@
 > Ví dụ: COD đang giao = `{UNPAID, CONFIRMED, SHIPPED}`; ly-in online chờ in = `{PAID, CONFIRMED, AWAITING_PRINT}`.
 
 > **Đơn xuất nguyên kiện (không tách):** `fulfillmentStatus` là **một trục cho cả đơn**, không theo từng dòng. Đơn **hỗn hợp** (vừa `CUSTOM_PRINT` vừa hàng sẵn) đi chung một nhịp: cả đơn `AWAITING_PRINT` cho tới khi in xong **mọi** ly-in → rồi mới `READY_TO_PICK` → một `GoodsIssue` xuất toàn bộ. **Chưa hỗ trợ giao từng phần** (partial fulfillment) — hàng sẵn trong đơn hỗn hợp vẫn chờ in xong mới xuất cùng.
+
+> **RMA không mở lại đơn:** hoàn hàng (UC-E06) xảy ra sau `DELIVERED` khi `orderStatus = CLOSED`. RMA **không** đưa `orderStatus` về trạng thái khác — chỉ chuyển `fulfillmentStatus → RETURNED` và đẩy `paymentStatus` theo luồng refund (`REFUND_PENDING → REFUNDED`) nếu hợp lệ. Đơn vẫn `CLOSED`.
