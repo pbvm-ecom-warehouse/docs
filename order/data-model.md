@@ -25,8 +25,11 @@
 | quantity | Number | |
 | isPrintItem | Boolean | Là ly-in (make-to-order)? |
 | designFile | String | File design (chỉ khi `isPrintItem`) |
+| designId | ObjectId | Trỏ `designs` (thư viện khách, khi `isPrintItem`) — truy vết & reuse |
 
 > Giỏ **chưa giữ tồn** — chỉ đọc `availableQty` (bản copy WMS sync) để hiển thị/cảnh báo. Giữ tồn thật xảy ra ở checkout.
+
+> **Design ly-in:** với `isPrintItem`, storefront cho khách upload mới hoặc chọn lại từ thư viện → set `designId` + copy `designFile` (snapshot). Xem [Catalog data-model](../catalog/data-model.md).
 
 ## Nhóm 2: Đơn hàng
 
@@ -64,6 +67,7 @@
 | quantity | Number | |
 | isPrintItem | Boolean | |
 | designFile | String | (khi `isPrintItem`) |
+| designId | ObjectId | Trỏ `designs` (khi `isPrintItem`); `designFile` là snapshot file lúc đặt |
 | printJobId | ObjectId | Tham chiếu PrintJob bên WMS (khi đã mở lệnh in) |
 
 ## Nhóm 3: Thanh toán
