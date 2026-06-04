@@ -68,17 +68,22 @@ KHÁCH                  PAYMENT / ORDER             WMS
 ## WF-E03: Giao hàng
 
 ```
-WMS                      ORDER                     SHIPPING (sau)
-  |                        |                           |
-  |<-- order.ready_to_fulfill (READY_TO_PICK) --|      |
-  | GoodsIssue (UC-05)     |                           |
-  |-- goods.issued ------->| fulfillment → ISSUED      |
-  |                        |-- Bàn giao vận chuyển --->|
-  |                        | fulfillment → SHIPPED     |
-  |                        | fulfillment → DELIVERED   |
-  |                        | COD → paymentStatus = PAID|
-  |                        | orderStatus → CLOSED      |
+WMS / SHIPPING           ORDER                     
+  |                        |                          
+  |<-- order.ready_to_fulfill (READY_TO_PICK) --|     
+  | GoodsIssue (UC-05)     |                          
+  |-- goods.issued ------->| fulfillment → ISSUED     
+  | auto sinh Shipment{PENDING}; gán carrier+tracking 
+  |-- shipment.shipped --->| fulfillment → SHIPPED    
+  |-- shipment.delivered ->| fulfillment → DELIVERED  
+  |                        | COD → paymentStatus = PAID
+  |                        | orderStatus → CLOSED     
+  |  [giao thất bại hẳn]   |                          
+  |-- shipment.returned -->| fulfillment → RETURNED   
+  |                        | orderStatus → CANCELLED  
+  |                        | ONLINE → REFUND_PENDING  
 ```
+> Chi tiết vòng đời vận đơn & xử lý giao thất bại: [shipping/workflow.md](../shipping/workflow.md#wf-s01-vòng-đời-vận-đơn-happy-path).
 
 ---
 

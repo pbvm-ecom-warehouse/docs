@@ -131,6 +131,7 @@
 5. PICKER chuẩn bị hàng, đóng gói
 6. PICKER xác nhận xuất kho → `InventoryStock` (shelf) `−=`, `StockBalance.onHand −=` và `reserved −=` *(available không đổi)*
 7. Trạng thái đơn hàng cập nhật → `Đã xuất kho`
+8. Xuất kho xong (`goods.issued`) → module **Shipping** tự động sinh `Shipment{PENDING}` cho đơn (1 GoodsIssue ↔ 1 vận đơn). Xem [Shipping UC-S02](../shipping/use-cases.md#uc-s02-tạo--gán-vận-đơn)
 
 ---
 
@@ -203,7 +204,7 @@
 ## UC-09: Hoàn hàng (Return / RMA)
 
 **Actor:** RECEIVER  
-**Trigger:** Khách trả hàng (sự kiện `order.returned` từ Ecommerce hoặc lập tay)  
+**Trigger:** Khách trả hàng (`order.returned` từ Ecommerce) **hoặc** hàng hoàn về do giao thất bại hẳn từ module Shipping (`shipment.returned`, xem [Shipping UC-S04](../shipping/use-cases.md#uc-s04-xử-lý-giao-thất-bại--hoàn-về)) **hoặc** lập tay  
 **Mục đích:** Nhập lại hàng tốt vào kho, tách hàng hỏng đi hủy
 
 ### Luồng chính
