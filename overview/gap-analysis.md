@@ -48,3 +48,13 @@
 - **Nghiệp vụ thiếu:** báo cáo tồn kho (theo SKU/kho/lô), doanh thu, đơn hàng, hiệu suất kho (nhập/xuất/kiểm).
 - **Event liên quan:** đọc-only từ collection sẵn có (`stock_movements`, `orders`...).
 - **Đề xuất:** làm cuối — cần dữ liệu giao dịch đủ.
+
+---
+
+## 6. YAGNI hoãn (ghi nhận, chưa thiết kế)
+
+> Theo [spec ecom-review 2026-06-04](../superpowers/specs/2026-06-04-ecom-review-design.md).
+
+- **Khuyến mãi/voucher/discount (Order):** chưa mô hình hóa; `Order` giữ `subtotal/shippingFee/total`.
+- **`shippingFee`:** nguồn tính phí phụ thuộc module **Shipping** (Hạng 1); checkout tạm chưa tự tính.
+- **RMA từng phần, partial fulfillment, guest checkout, thuế/VAT:** ngoài phạm vi hiện tại.
