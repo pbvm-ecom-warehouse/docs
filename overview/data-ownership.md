@@ -28,10 +28,14 @@ stock_transfers                customers
 stock_counts                   carts
 suppliers                      payments
 supplier_items
+carriers
+shipments
 ```
 
 > **Không bao giờ đọc chéo collection trực tiếp giữa 2 app.**
 > Liên kết duy nhất giữa 2 bên là `sku`.
+
+> **Module Shipping (WMS)** sở hữu `carriers` (đơn vị vận chuyển) và `shipments` (vận đơn); liên kết sang đơn Ecommerce chỉ qua `orderId` (id tham chiếu) + event — không đọc chéo `ecom_db`.
 
 > Bên Ecommerce, `categories`/`products`/`product_variants`/`designs` do **module Catalog** sở hữu; `orders`/`carts`/`payments` do **module Order**; `customers` (tài khoản khách) do **module Auth** sở hữu — Order/Catalog chỉ trỏ `customerId`, **không định nghĩa schema Customer** (xem [gap-analysis](./gap-analysis.md#2-auth--user--hạng-2)). Xem [Catalog data-model](../catalog/data-model.md).
 
@@ -112,13 +116,17 @@ export class StockProcessor {
 | `order.cancelled` | Ecommerce | WMS | Hủy đơn trước khi xuất → **thông báo thuần**; release reserve (`reserved −= qty`) + `availableQty += qty` đã do Ecom làm atomic trong transaction hủy. WMS ghi nhận để dừng downstream |
 | `order.returned` | Ecommerce | WMS | Khách trả hàng → WMS mở phiếu hoàn (UC-09), nhập lại hàng tốt |
 | `print.completed` | WMS | Ecommerce | PrintJob của đơn in xong → Ecom set `OrderItem.printJobId`; đã in xong **mọi** ly-in của đơn → lật `fulfillmentStatus: AWAITING_PRINT → READY_TO_PICK` |
-| `order.ready_to_fulfill` | Ecommerce | WMS | Đơn vào `READY_TO_PICK` (COD ngay sau checkout / online-không-in khi `payment.success` / đơn ly-in sau khi in xong) → WMS sinh `GoodsIssue` (UC-05) xuất từ `fulfillWarehouseId` |
+| `order.ready_to_fulfill` | Ecommerce | WMS | Đơn vào `READY_TO_PICK` (COD ngay sau checkout / online-không-in khi `payment.success` / đơn ly-in sau khi in xong) → WMS sinh `GoodsIssue` (UC-05) xuất từ `fulfillWarehouseId`. **Payload mang theo** `shippingAddress` + `recipient{name,phone}` + `paymentMethod` + `codAmount` để WMS dựng `Shipment` (WMS không đọc `ecom_db`) |
 | `goods.issued` | WMS | Ecommerce | Xuất kho xong → cập nhật trạng thái đơn *(không trừ available lần nữa — đã trừ lúc chốt đơn)* |
+| `shipment.shipped` | WMS | Ecommerce | Vận đơn đã bàn giao hãng (`IN_TRANSIT`) → `fulfillmentStatus: ISSUED → SHIPPED` |
+| `shipment.delivered` | WMS | Ecommerce | Giao thành công → `fulfillmentStatus → DELIVERED`; COD → `paymentStatus = PAID`; `orderStatus → CLOSED` |
+| `shipment.returned` | WMS | Ecommerce | Giao thất bại hẳn/hoàn về kho → `fulfillmentStatus → RETURNED`; `orderStatus → CANCELLED`; online đã trả → `paymentStatus → REFUND_PENDING` |
 | `stock.low` | WMS | Notification | `available < minQuantity` |
 | `stock.near_expiry` | WMS | Notification | Lô còn ≤ `nearExpiryDays` ngày tới hạn (job định kỳ) |
 | `stock.expired` | WMS | Ecommerce | Lô tới hạn → `expired +=`, `available` giảm → cập nhật `availableQty` |
 | `payment.success` | Ecommerce | Notification | Thanh toán thành công → email xác nhận |
-| `goods.issued` | WMS | Notification | Hàng xuất kho → thông báo giao hàng |
+| `shipment.shipped` | WMS | Notification | Vận đơn đã bàn giao hãng → thông báo "đang giao" cho khách |
+| `shipment.delivered` | WMS | Notification | Giao thành công → thông báo "đã giao" cho khách |
 
 > **Catalog là consumer tồn:** `stock.changed` và `stock.expired` được module **Catalog** (Ecommerce) tiêu thụ → cập nhật `ProductVariant.availableQty` (match theo `sku`). Xem [Catalog data-model](../catalog/data-model.md).
 
