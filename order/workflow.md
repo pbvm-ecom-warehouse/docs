@@ -25,11 +25,12 @@ KHÁCH                     CHECKOUT                  WMS (stock_balances)
   |   (COD/ONLINE)           |                           |
   |                    Chặn: ly-in + COD → từ chối        |
   |                          |-- validateStock (copy) -->|
-  |                          |-- reserve ATOMIC -------->| reserved += qty
-  |                          |   (chọn kho, ưu tiên CENTRAL)  (khóa document)
+  |                          |-- reserve ATOMIC (txn) -->| reserved += qty (wms_db)
+  |                          |   availableQty −= qty (ecom_db, cùng txn)  (khóa document)
   |                          |<-- OK / hết hàng ---------|
   |                    Tạo Order{PLACED, UNPAID, NONE}    |
-  |                    fulfillWarehouseId, order.placed   |
+  |                    fulfillWarehouseId; order.placed (thông báo thuần)
+
   |                    Khởi tạo Payment                   |
   |<-- Đơn đã tạo -----------|                           |
 ```
@@ -48,13 +49,16 @@ KHÁCH                  PAYMENT / ORDER             WMS
   |                    paymentStatus → PAID           |
   |                    orderStatus → CONFIRMED        |
   |                    Có ly-in? --yes--> print.requested -->| mở PrintJob (UC-04)
-  |                    fulfillment → AWAITING_PRINT   | in xong → (báo) READY_TO_PICK
+  |                    fulfillment → AWAITING_PRINT   |
+  |                    <-- print.completed (đủ mọi ly-in) ---| in xong
+  |                    fulfillment → READY_TO_PICK    |
   |                    Có ly-in? --no--> READY_TO_PICK|
+  |                    READY_TO_PICK → order.ready_to_fulfill -->| (WMS sinh GoodsIssue)
   |                          |                       |
   | [COD]                    |                       |
   |-- Đặt (hàng sẵn) ------->|                       |
   |                    orderStatus → CONFIRMED        |
-  |                    fulfillment → READY_TO_PICK    |
+  |                    fulfillment → READY_TO_PICK → order.ready_to_fulfill -->| (WMS sinh GoodsIssue)
   |                          |                       |
   | [Quá paymentDeadline chưa PAID] → order.cancelled → release reserve → CANCELLED
 ```
@@ -66,8 +70,8 @@ KHÁCH                  PAYMENT / ORDER             WMS
 ```
 WMS                      ORDER                     SHIPPING (sau)
   |                        |                           |
-  | READY_TO_PICK          |                           |
-  |-- GoodsIssue (UC-05) ->|                           |
+  |<-- order.ready_to_fulfill (READY_TO_PICK) --|      |
+  | GoodsIssue (UC-05)     |                           |
   |-- goods.issued ------->| fulfillment → ISSUED      |
   |                        |-- Bàn giao vận chuyển --->|
   |                        | fulfillment → SHIPPED     |
