@@ -69,7 +69,7 @@ WMS đẩy event → Ecommerce cập nhật các trục trạng thái tương �
 | `PENDING` / `PICKED_UP` | — | `ISSUED` (không đổi) | — | — |
 | `IN_TRANSIT` | `shipment.shipped` | `ISSUED → SHIPPED` | — | — |
 | `DELIVERED` | `shipment.delivered` | `SHIPPED → DELIVERED` | COD → `PAID`; ONLINE không đổi (đã `PAID`) | `→ CLOSED` |
-| `FAILED` | — | Giữ nguyên | — | — — retry → quay lại `IN_TRANSIT` |
+| `FAILED` | — | Giữ nguyên (retry → quay lại `IN_TRANSIT`) | — | — |
 | `RETURNING → RETURNED` | `shipment.returned` | `→ RETURNED` | ONLINE đã trả → `REFUND_PENDING` | `→ CANCELLED` |
 
 > **1 đơn = 1 vận đơn:** đơn xuất nguyên kiện, không tách giao từng phần. `shipmentStatus` là trục duy nhất cho cả lô hàng.
