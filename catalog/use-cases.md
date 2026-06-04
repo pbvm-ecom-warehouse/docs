@@ -11,6 +11,16 @@
 | UC-C05 | Quản trị catalog (CRUD) | Admin | 🔄 Đang phân tích |
 | UC-C06 | Đồng bộ availableQty từ WMS | Hệ thống | 🔄 Đang phân tích |
 
+> **Ánh xạ UC ↔ Workflow** (số WF không trùng số UC — workflow gộp duyệt+tìm và bỏ qua phần admin):
+>
+> | Use-case | Workflow |
+> |---|---|
+> | UC-C01 Duyệt + UC-C02 Tìm kiếm | [WF-C01 Duyệt & tìm kiếm](./workflow.md#wf-c01-duyệt--tìm-kiếm) |
+> | UC-C03 Xem chi tiết & chọn biến thể | [WF-C02](./workflow.md#wf-c02-chi-tiết--chọn-biến-thể) |
+> | UC-C04 Thư viện design | [WF-C03](./workflow.md#wf-c03-chọnupload-design-ly-in-custom_print) |
+> | UC-C05 Quản trị catalog | *(thao tác admin, chưa vẽ workflow)* |
+> | UC-C06 Đồng bộ availableQty | [WF-C04](./workflow.md#wf-c04-đồng-bộ-tồn-consumer) |
+
 ---
 
 ## UC-C01: Duyệt danh mục & sản phẩm

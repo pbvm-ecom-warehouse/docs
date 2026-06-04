@@ -2,7 +2,7 @@
 
 > Trạng thái: 🔄 Đang phân tích — theo spec [2026-06-04-ecommerce-order-module-design](../superpowers/specs/2026-06-04-ecommerce-order-module-design.md)
 
-> **Ownership:** Ecommerce sở hữu `carts`/`orders`/`payments`/`customers`. Liên kết WMS **chỉ qua `sku`** + `printJobId`/`fulfillWarehouseId` — không đọc chéo collection. Xem [data-ownership](../overview/data-ownership.md).
+> **Ownership:** Module Order sở hữu `carts`/`orders`/`payments`. `customerId` trỏ tài khoản khách (`customers`) do **module Auth** sở hữu — Order **không định nghĩa schema Customer**, chỉ tham chiếu id. Liên kết WMS **chỉ qua `sku`** + `printJobId`/`fulfillWarehouseId` — không đọc chéo collection. Xem [data-ownership](../overview/data-ownership.md).
 
 ## Nhóm 1: Giỏ hàng
 
@@ -28,6 +28,8 @@
 | designId | ObjectId | Trỏ `designs` (thư viện khách, khi `isPrintItem`) — truy vết & reuse |
 
 > Giỏ **chưa giữ tồn** — chỉ đọc `availableQty` (bản copy WMS sync) để hiển thị/cảnh báo. Giữ tồn thật xảy ra ở checkout.
+
+> **Vòng đời Cart:** mỗi khách có tối đa 1 giỏ `ACTIVE`. Checkout thành công ([WF-E01](./workflow.md#wf-e01-checkout--giữ-tồn)) → `ACTIVE → CONVERTED` (đóng giỏ, tạo Order). Giỏ `ACTIVE` không đụng tới quá `N` ngày (cấu hình được) → job nền chuyển `ABANDONED` (giải phóng để khách mở giỏ mới). Giỏ không bao giờ tự giữ tồn nên không cần release khi `ABANDONED`.
 
 > **Design ly-in:** với `isPrintItem`, storefront cho khách upload mới hoặc chọn lại từ thư viện → set `designId` + copy `designFile` (snapshot). Xem [Catalog data-model](../catalog/data-model.md).
 
@@ -84,7 +86,10 @@
 | status | Enum | `INIT` / `SUCCESS` / `FAILED` / `REFUNDED` |
 | providerTxnId | String | Mã giao dịch cổng — **khóa idempotency** webhook |
 | paidAt | DateTime | |
+| refundedAt | DateTime | Thời điểm hoàn tiền (khi `status = REFUNDED`) |
 | raw | Object | Payload webhook (lưu đối soát) |
+
+> **Luồng hoàn tiền (refund):** chỉ áp dụng cho ONLINE đã `PAID` (hủy [WF-E04](./workflow.md#wf-e04-hủy-đơn-trước-xuất-kho) hoặc RMA [WF-E05](./workflow.md#wf-e05-hoàn-hàng-rma)). Khi đơn vào `paymentStatus = REFUND_PENDING`, **hệ thống (job)/admin** gọi API hoàn tiền của cổng → nhận callback → set `Payment.status = REFUNDED` (idempotent theo `providerTxnId`) + `refundedAt` → cập nhật `Order.paymentStatus = REFUNDED`. Refund thất bại → giữ `REFUND_PENDING`, cảnh báo để xử lý tay. COD chưa thu tiền → không refund.
 
 ## Nhóm 4: Ba trục trạng thái
 
@@ -97,3 +102,5 @@
 | `fulfillmentStatus` | NONE → AWAITING_PRINT → READY_TO_PICK → ISSUED → SHIPPED → DELIVERED (+ RETURNED) | print xong / `goods.issued` / Shipping |
 
 > Ví dụ: COD đang giao = `{UNPAID, CONFIRMED, SHIPPED}`; ly-in online chờ in = `{PAID, CONFIRMED, AWAITING_PRINT}`.
+
+> **Đơn xuất nguyên kiện (không tách):** `fulfillmentStatus` là **một trục cho cả đơn**, không theo từng dòng. Đơn **hỗn hợp** (vừa `CUSTOM_PRINT` vừa hàng sẵn) đi chung một nhịp: cả đơn `AWAITING_PRINT` cho tới khi in xong **mọi** ly-in → rồi mới `READY_TO_PICK` → một `GoodsIssue` xuất toàn bộ. **Chưa hỗ trợ giao từng phần** (partial fulfillment) — hàng sẵn trong đơn hỗn hợp vẫn chờ in xong mới xuất cùng.

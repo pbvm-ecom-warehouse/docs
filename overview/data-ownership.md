@@ -33,7 +33,7 @@ supplier_items
 > **Không bao giờ đọc chéo collection trực tiếp giữa 2 app.**
 > Liên kết duy nhất giữa 2 bên là `sku`.
 
-> Bên Ecommerce, `categories`/`products`/`product_variants`/`designs` do **module Catalog** sở hữu; `orders`/`carts`/`payments` do **module Order**. Xem [Catalog data-model](../catalog/data-model.md).
+> Bên Ecommerce, `categories`/`products`/`product_variants`/`designs` do **module Catalog** sở hữu; `orders`/`carts`/`payments` do **module Order**; `customers` (tài khoản khách) do **module Auth** sở hữu — Order/Catalog chỉ trỏ `customerId`, **không định nghĩa schema Customer** (xem [gap-analysis](./gap-analysis.md#2-auth--user--hạng-2)). Xem [Catalog data-model](../catalog/data-model.md).
 
 ---
 
