@@ -87,7 +87,7 @@
 ## UC-04: Lệnh in ly (Make-to-Order)
 
 **Actor:** MANAGER tạo lệnh, PRINTER thực hiện  
-**Trigger:** Có đơn hàng khách đặt ly in logo/design riêng  
+**Trigger:** Sự kiện `print.requested` từ Ecommerce (đơn ly-in đã `PAID`) — xem [data-ownership](../overview/data-ownership.md)  
 **Đặc điểm:** In tại chỗ (in-house), không thuê ngoài. **CUP_PRINTED per-design** — mỗi mẫu in là 1 SKU riêng.
 
 > **Đặt hàng ly in (make-to-order) & reserve — chuỗi hold `reserved`:** khi khách đặt một design,
@@ -120,7 +120,7 @@
 **Trigger:** Đơn hàng được xác nhận, cần xuất hàng giao cho khách  
 **Áp dụng cho:** Tất cả loại hàng (MATERIAL, CUP_BLANK, CUP_PRINTED, PACKAGING)
 
-> Tồn đã được **giữ (`reserved`) từ lúc chốt đơn** ở kho được phân bổ (ưu tiên CENTRAL). Khâu này chỉ hiện thực hóa: lấy hàng & trừ tồn thật. *(Với ly-in make-to-order, hold đã **chuyển sang CUP_PRINTED** sau khi in xong (UC-04) → UC-05 xử lý đồng nhất qua `reserved`.)*
+> Tồn đã được **giữ (`reserved`) từ lúc khách đặt** (sự kiện `order.placed`) ở kho được phân bổ (ưu tiên CENTRAL); phiếu xuất chỉ sinh khi đơn ở `orderStatus = CONFIRMED`. Khâu này chỉ hiện thực hóa: lấy hàng & trừ tồn thật. *(Với ly-in make-to-order, hold đã **chuyển sang CUP_PRINTED** sau khi in xong (UC-04) → UC-05 xử lý đồng nhất qua `reserved`.)*
 
 ### Luồng chính
 
