@@ -7,6 +7,7 @@
 | [System Context](./overview/system-context.md)   | Kiến trúc tổng thể, Nginx, BullMQ, Infrastructure |
 | [NestJS Monorepo](./overview/nestjs-monorepo.md) | Monorepo mode, Auth tách biệt WMS vs Ecommerce    |
 | [Data Ownership](./overview/data-ownership.md)   | Phân chia collection, sync tồn kho qua event      |
+| [Main Flow](./overview/main-flow.md)             | Luồng nghiệp vụ end-to-end toàn hệ thống (P0→P7)   |
 
 ## Danh mục module
 
