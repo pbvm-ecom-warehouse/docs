@@ -7,7 +7,7 @@
 
 | Hạng | Module | Hiện trạng | Phụ thuộc |
 |---|---|---|---|
-| 1 | Shipping | Tham chiếu ở [main-flow P7](./main-flow.md) & UC-E04, gọi là "module sau" | Order (đã có) |
+| 1 | **Shipping** ✅ | **Đã thiết kế** — xem [shipping/](../shipping/) | Order (đã có) |
 | 2 | Auth | [system-context](./system-context.md#auth) mô tả JWT/roles, thiếu UC | — |
 | 3 | **Supplier** ✅ | **Đã thiết kế** — xem [supplier/](../supplier/) | Warehouse (đã có) |
 | 4 | Notification | App :3003 trong [system-context](./system-context.md#các-ứng-dụng), thiếu docs | Order/WMS events |
@@ -17,10 +17,9 @@
 
 ## 1. Shipping (Vận chuyển) — Hạng 1
 
-- **Hiện trạng:** [main-flow P7](./main-flow.md#p7--giao-hàng--đóng-đơn) và [UC-E04](../order/use-cases.md#uc-e04-theo-dõi--fulfillment-đơn) tham chiếu `fulfillmentStatus = SHIPPED → DELIVERED`, ghi rõ "module sau".
-- **Nghiệp vụ thiếu:** tạo vận đơn, gán đơn vị vận chuyển, cập nhật trạng thái giao, COD reconciliation (`paymentStatus = PAID` khi `DELIVERED`), đóng đơn `CLOSED`.
-- **Event liên quan:** tiêu thụ `goods.issued`; cần phát trạng thái giao về Order.
-- **Đề xuất:** làm trước — chặn happy-path end-to-end.
+- **Hiện trạng:** ✅ Đã thiết kế — module thuộc WMS (`wms_db`): [shipping/use-cases](../shipping/use-cases.md), [data-model](../shipping/data-model.md), [workflow](../shipping/workflow.md).
+- **Đã có:** master data `carriers`; vận đơn `shipments` auto sinh sau `goods.issued` (1 đơn = 1 vận đơn); enum `shipmentStatus` 7 trạng thái; 3 event `shipment.shipped`/`shipment.delivered`/`shipment.returned` về Order; COD flip `PAID` khi `DELIVERED`; giao thất bại → retry/return-to-sender nối UC-09.
+- **Chưa làm (YAGNI):** tích hợp API hãng (chỉ chừa interface `apiConfig`), tự tính `shippingFee`, đối soát dòng tiền COD/remittance, partial fulfillment / split nhiều vận đơn.
 
 ## 2. Auth & User — Hạng 2
 

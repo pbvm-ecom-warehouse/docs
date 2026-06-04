@@ -48,7 +48,7 @@ NCC → [P0 Nhập: PO→GRN→Put-away]
 | P4 Thanh toán | Order | [WF-E02](../order/workflow.md#wf-e02-thanh-toán--xác-nhận) |
 | P5 In ly (nếu có ly-in) | WMS | [WF-02](../warehouse/workflow.md#wf-02-lệnh-in-ly-theo-đơn-hàng-uc-04) |
 | P6 Xuất kho | WMS | [WF-03](../warehouse/workflow.md#wf-03-xuất-kho-theo-đơn-hàng-uc-05) |
-| P7 Giao hàng | Order | [WF-E03](../order/workflow.md#wf-e03-giao-hàng) |
+| P7 Giao hàng | Shipping | [WF-E03](../order/workflow.md#wf-e03-giao-hàng) · [WF-S01](../shipping/workflow.md#wf-s01-vòng-đời-vận-đơn-happy-path) |
 | Hủy / RMA | Order | [WF-E04](../order/workflow.md#wf-e04-hủy-đơn-trước-xuất-kho) · [WF-E05](../order/workflow.md#wf-e05-hoàn-hàng-rma) |
 | Sync tồn (xuyên suốt) | Catalog | [WF-C04](../catalog/workflow.md#wf-c04-đồng-bộ-tồn-consumer) |
 
@@ -141,13 +141,17 @@ ORDER                   WMS / PICKER             stock_balances
 ### P7 — Giao hàng & đóng đơn
 
 ```
-WMS/ORDER                SHIPPING                 KHÁCH
+WMS / SHIPPING           ORDER                    KHÁCH
  | ISSUED                  |                          |
- |-- Bàn giao vận chuyển ->| fulfillment=SHIPPED      |
- |                         |-- Giao tới ------------->| fulfillment=DELIVERED
+ | auto sinh Shipment{PENDING}; gán carrier+tracking  |
+ |-- shipment.shipped ---->| fulfillment=SHIPPED      |
+ |                         |-- Giao tới ------------->| 
+ |-- shipment.delivered -->| fulfillment=DELIVERED    |
  | COD → paymentStatus=PAID; orderStatus=CLOSED       |
+ |  [giao thất bại hẳn]    |                          |
+ |-- shipment.returned --->| fulfillment=RETURNED; orderStatus=CANCELLED
 ```
-> [WF-E03](../order/workflow.md#wf-e03-giao-hàng). Notification gửi thông báo giao hàng (`goods.issued`).
+> [WF-E03](../order/workflow.md#wf-e03-giao-hàng) · chi tiết [shipping/workflow.md](../shipping/workflow.md#wf-s01-vòng-đời-vận-đơn-happy-path). Notification gửi thông báo giao hàng qua `shipment.shipped`/`shipment.delivered`.
 
 ---
 
@@ -181,6 +185,9 @@ WMS/ORDER                SHIPPING                 KHÁCH
 | P5 | `print.completed` | WMS → Ecom | In xong → set `printJobId`; đủ mọi ly-in → `READY_TO_PICK` |
 | P6 | `order.ready_to_fulfill` | Ecom → WMS | Đơn `READY_TO_PICK` → WMS sinh GoodsIssue |
 | P6 | `goods.issued` | WMS → Ecom | Xuất kho xong → `fulfillment=ISSUED` (không trừ available lần nữa) |
+| P7 | `shipment.shipped` | WMS → Ecom | Bàn giao hãng → `fulfillment=SHIPPED` |
+| P7 | `shipment.delivered` | WMS → Ecom | Giao thành công → `DELIVERED`; COD→`PAID`; `orderStatus=CLOSED` |
+| P7 | `shipment.returned` | WMS → Ecom | Giao thất bại hẳn → `RETURNED`; `orderStatus=CANCELLED` |
 | Hủy | `order.cancelled` | Ecom → WMS | Trả tồn (`reserved−`, available+) |
 | RMA | `order.returned` | Ecom → WMS | Mở phiếu hoàn (UC-09) |
 | Nền | `stock.expired` | WMS → Ecom | Lô hết hạn → `availableQty` giảm |

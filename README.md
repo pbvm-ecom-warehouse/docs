@@ -18,7 +18,7 @@
 | [Catalog (Ecommerce)](./catalog/) | [UC](./catalog/use-cases.md) | [Data Model](./catalog/data-model.md) | [Workflow](./catalog/workflow.md) |
 | [Đơn hàng & E-commerce](./order/) | [UC](./order/use-cases.md)     | [Data Model](./order/data-model.md)     | [Workflow](./order/workflow.md)     |
 | [Nhà cung cấp](./supplier/)       | [UC](./supplier/use-cases.md)  | [Data Model](./supplier/data-model.md)  | [Workflow](./supplier/workflow.md)  |
-| [Vận chuyển](./shipping/)         | —                              | —                                       | —                                   |
+| [Vận chuyển](./shipping/)         | [UC](./shipping/use-cases.md)  | [Data Model](./shipping/data-model.md)  | [Workflow](./shipping/workflow.md)  |
 | [Báo cáo](./report/)              | —                              | —                                       | —                                   |
 
 ## Danh mục hàng hóa
