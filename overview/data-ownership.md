@@ -97,7 +97,8 @@ export class StockProcessor {
 | Event | Từ | Đến | Khi nào |
 |---|---|---|---|
 | `stock.changed` | WMS | Ecommerce | **Khi `available` (tổng gộp mọi kho) đổi**: nhập kho (GRN), giữ hàng khi chốt đơn, hủy đơn, kiểm kho điều chỉnh, chuyển kho (reserve nguồn lúc `CONFIRMED` −/nhận đích +), in ly (blank↓ khi tạo lệnh; printed↑ **chỉ khi in vào kho, không gắn đơn**), hoàn hàng. *(KHÔNG bắn khi: put-away, pick-xuất, **scrap** — available không đổi vì hàng hết hạn vốn đã ngoài available)* |
-| `order.confirmed` | Ecommerce | WMS | Khách đặt hàng và thanh toán xong → WMS giữ tồn (`reserved += qty`) *(ly-in: nếu printed thiếu → giữ blank + mở PrintJob, xem [UC-04](../warehouse/use-cases.md#uc-04-lệnh-in-ly-make-to-order))* |
+| `order.placed` | Ecommerce | WMS | **Khách chốt đơn (cả COD/online)** → WMS giữ tồn (`reserved += qty`, atomic lúc checkout). **Tách khỏi thanh toán** — reserve ngay khi đặt, không chờ trả tiền |
+| `print.requested` | Ecommerce | WMS | `payment.success` & đơn có ly-in → WMS mở PrintJob (UC-04) cho từng ly-in (make-to-order chỉ chạy sau khi đã trả) |
 | `order.cancelled` | Ecommerce | WMS | Hủy đơn trước khi xuất → WMS trả tồn (`reserved −= qty`, available tăng) |
 | `order.returned` | Ecommerce | WMS | Khách trả hàng → WMS mở phiếu hoàn (UC-09), nhập lại hàng tốt |
 | `goods.issued` | WMS | Ecommerce | Xuất kho xong → cập nhật trạng thái đơn *(không trừ available lần nữa — đã trừ lúc chốt đơn)* |
@@ -147,6 +148,8 @@ Khi **chốt đơn**, phải giữ tồn **atomic** trên nguồn thật `wms_db
 > Giữ tồn ở **lớp tổng** (`stock_balances`), chưa cần biết shelf — PICKER chọn vị trí lấy sau ở khâu xuất kho.
 
 > Hai khách mua đồng thời ly cuối → chỉ 1 transaction commit được → **không bao giờ oversell**. Đây chính là lợi thế của monolith cùng cluster; nếu tách 2 MongoDB server riêng (microservices) thì mới phải dùng Saga.
+
+> **Reserve tách khỏi thanh toán:** tồn được giữ ngay khi đặt (`order.placed`), áp dụng cho cả COD và online. Thanh toán (`payment.success`) chỉ dùng để **xác nhận đơn online** và **mở lệnh in** cho đơn ly-in (`print.requested`). Đơn online quá hạn chưa trả → tự `order.cancelled` (release reserve).
 
 ### Phân bổ kho khi chốt đơn (chưa hỗ trợ split đa kho)
 
