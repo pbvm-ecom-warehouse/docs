@@ -117,14 +117,14 @@
 ## UC-05: Xuất kho theo đơn hàng
 
 **Actor:** PICKER thực hiện  
-**Trigger:** Đơn hàng được xác nhận, cần xuất hàng giao cho khách  
+**Trigger:** Sự kiện `order.ready_to_fulfill` (Ecom→WMS) khi đơn vào `fulfillmentStatus = READY_TO_PICK`  
 **Áp dụng cho:** Tất cả loại hàng (MATERIAL, CUP_BLANK, CUP_PRINTED, PACKAGING)
 
-> Tồn đã được **giữ (`reserved`) từ lúc khách đặt** (sự kiện `order.placed`) ở kho được phân bổ (ưu tiên CENTRAL); phiếu xuất chỉ sinh khi đơn ở `orderStatus = CONFIRMED`. Khâu này chỉ hiện thực hóa: lấy hàng & trừ tồn thật. *(Với ly-in make-to-order, hold đã **chuyển sang CUP_PRINTED** sau khi in xong (UC-04) → UC-05 xử lý đồng nhất qua `reserved`.)*
+> Tồn đã được **giữ (`reserved`) từ lúc khách đặt** (atomic trong transaction checkout, không phải qua event) ở kho được phân bổ (ưu tiên CENTRAL); phiếu xuất chỉ sinh khi đơn vào `fulfillmentStatus = READY_TO_PICK` (Ecom phát `order.ready_to_fulfill`) — với đơn ly-in là sau khi in xong mọi ly-in, không chỉ khi `CONFIRMED`. Khâu này chỉ hiện thực hóa: lấy hàng & trừ tồn thật. *(Với ly-in make-to-order, hold đã **chuyển sang CUP_PRINTED** sau khi in xong (UC-04) → UC-05 xử lý đồng nhất qua `reserved`.)*
 
 ### Luồng chính
 
-1. Hệ thống sinh phiếu xuất kho từ đơn hàng đã xác nhận
+1. Hệ thống sinh phiếu xuất kho khi nhận `order.ready_to_fulfill` (đơn ở `READY_TO_PICK`)
 2. Kiểm tra tồn kho từng mặt hàng — cảnh báo nếu không đủ
 3. Hệ thống hiển thị vị trí (Zone/Rack/Shelf) của từng mặt hàng. Hàng `isPerishable` → **gợi ý lô hết hạn sớm nhất (FEFO)**; PICKER được chọn lô khác (ghi đè). Lô đã `EXPIRED` không được xuất bán
 4. PICKER tới vị trí gợi ý → **quét barcode SKU + quét shelf** để xác nhận đúng món, đúng chỗ *(quét sai → cảnh báo)*

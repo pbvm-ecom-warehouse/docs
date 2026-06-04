@@ -162,7 +162,7 @@ Khi **chốt đơn**, phải giữ tồn **atomic** trên nguồn thật `wms_db
 
 > Hai khách mua đồng thời ly cuối → chỉ 1 transaction commit được → **không bao giờ oversell**. Đây chính là lợi thế của monolith cùng cluster; nếu tách 2 MongoDB server riêng (microservices) thì mới phải dùng Saga.
 
-> **Reserve tách khỏi thanh toán:** tồn được giữ ngay khi đặt (`order.placed`), áp dụng cho cả COD và online. Thanh toán (`payment.success`) chỉ dùng để **xác nhận đơn online** và **mở lệnh in** cho đơn ly-in (`print.requested`). Đơn online quá hạn chưa trả → tự `order.cancelled` (release reserve).
+> **Reserve tách khỏi thanh toán:** tồn được giữ ngay khi đặt (atomic trong transaction checkout — `order.placed` chỉ là thông báo thuần), áp dụng cho cả COD và online. Thanh toán (`payment.success`) chỉ dùng để **xác nhận đơn online** và **mở lệnh in** cho đơn ly-in (`print.requested`). Đơn online quá hạn chưa trả → tự `order.cancelled` (release reserve).
 
 ### Phân bổ kho khi chốt đơn (chưa hỗ trợ split đa kho)
 
