@@ -78,8 +78,8 @@
 
 ## UC-C05: Quản trị catalog (CRUD)
 
-**Actor:** Admin
-**Mục đích:** Tạo/sửa danh mục, sản phẩm, biến thể. *(Mức use-case — chi tiết phân quyền/UI quản trị để module sau.)*
+**Actor:** Admin — nhân viên back-office (`users`, token `type = user`, role ⊇ {ADMIN, MANAGER}); xem [auth-wms](../auth-wms/use-cases.md). Route admin của app Ecommerce validate token bằng shared secret, **không đọc chéo `wms_db`**.
+**Mục đích:** Tạo/sửa danh mục, sản phẩm, biến thể.
 
 ### Luồng chính
 1. Tạo/sửa `Category` (gắn `parentId`, `position`)

@@ -8,7 +8,7 @@
 | Hạng | Module | Hiện trạng | Phụ thuộc |
 |---|---|---|---|
 | 1 | **Shipping** ✅ | **Đã thiết kế** — xem [shipping/](../shipping/) | Order (đã có) |
-| 2 | Auth | [system-context](./system-context.md#auth) mô tả JWT/roles, thiếu UC | — |
+| 2 | **Auth** ✅ | **Đã thiết kế** — [auth-wms/](../auth-wms/) (nhân viên) + [auth-ecom/](../auth-ecom/) (khách) | — |
 | 3 | **Supplier** ✅ | **Đã thiết kế** — xem [supplier/](../supplier/) | Warehouse (đã có) |
 | 4 | Notification | App :3003 trong [system-context](./system-context.md#các-ứng-dụng), thiếu docs | Order/WMS events |
 | 5 | Report | [README](../README.md) liệt kê, trống | Tất cả (đọc-only) |
@@ -21,12 +21,12 @@
 - **Đã có:** master data `carriers`; vận đơn `shipments` auto sinh sau `goods.issued` (1 đơn = 1 vận đơn); enum `shipmentStatus` 7 trạng thái; 3 event `shipment.shipped`/`shipment.delivered`/`shipment.returned` về Order; COD flip `PAID` khi `DELIVERED`; giao thất bại → retry/return-to-sender nối UC-09.
 - **Chưa làm (YAGNI):** tích hợp API hãng (chỉ chừa interface `apiConfig`), tự tính `shippingFee`, đối soát dòng tiền COD/remittance, partial fulfillment / split nhiều vận đơn.
 
-## 2. Auth & User — Hạng 2
+## 2. Auth & User — Hạng 2 ✅ Đã thiết kế
 
-- **Hiện trạng:** [system-context](./system-context.md#auth) đã mô tả JWT stateless, `users` (nhân viên) vs `customers` (khách), RolesGuard.
-- **Nghiệp vụ thiếu:** đăng ký/đăng nhập khách, quản lý tài khoản nhân viên, refresh token, đổi/quên mật khẩu, khóa tài khoản.
-- **Event liên quan:** không (đồng bộ trong từng app).
-- **Đề xuất:** nền tảng — làm sớm, độc lập.
+- **Hiện trạng:** ✅ Tách 2 module — [auth-wms](../auth-wms/use-cases.md) (nhân viên, `users`) + [auth-ecom](../auth-ecom/use-cases.md) (khách, `customers`). Spec: [2026-06-05-auth-design](../superpowers/specs/2026-06-05-auth-design.md).
+- **Đã có:** access ngắn + refresh lưu DB (thu hồi được); claim `type=user|customer`; **back-office shop dùng chung `users`** qua shared JWT (làm rõ Actor "Admin" của [catalog UC-C05](../catalog/use-cases.md)); đăng ký + verify email + quên/đặt lại mật khẩu (khách); ADMIN tạo/khóa/reset nhân viên; sổ địa chỉ `customers.addresses[]`.
+- **Event mới:** Auth-Ecom phát `customer.verify_requested` & `customer.password_reset_requested` → Notification (xem [data-ownership](./data-ownership.md#các-event-đồng-bộ-giữa-wms-và-ecommerce)).
+- **Chưa làm (YAGNI):** role chuyên biệt back-office (`CATALOG_MANAGER`/`ORDER_MANAGER` — tạm dùng ADMIN/MANAGER), SSO/OAuth social, 2FA, verify-email cho nhân viên.
 
 ## 3. Supplier (Nhà cung cấp) — Hạng 3 ✅ Đã thiết kế
 
@@ -57,3 +57,4 @@
 - **Khuyến mãi/voucher/discount (Order):** chưa mô hình hóa; `Order` giữ `subtotal/shippingFee/total`.
 - **`shippingFee`:** nguồn tính phí phụ thuộc module **Shipping** (Hạng 1); checkout tạm chưa tự tính.
 - **RMA từng phần, partial fulfillment, guest checkout, thuế/VAT:** ngoài phạm vi hiện tại.
+- **Sổ cái tiền `payment_transactions` (append-only):** đang dùng `payments` ghi-đè status (đủ cho full-refund). Xem xét tách sổ cái append-only kiểu `stock_movements` để đối soát dòng tiền/COD/cổng — **brainstorm riêng cho module Order/Payment** (nối tiếp spec Auth).

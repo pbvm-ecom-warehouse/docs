@@ -89,7 +89,7 @@
 | refundedAt | DateTime | Thời điểm hoàn tiền (khi `status = REFUNDED`) |
 | raw | Object | Payload webhook (lưu đối soát) |
 
-> **Luồng hoàn tiền (refund):** chỉ áp dụng cho ONLINE đã `PAID` (hủy [WF-E04](./workflow.md#wf-e04-hủy-đơn-trước-xuất-kho) hoặc RMA [WF-E05](./workflow.md#wf-e05-hoàn-hàng-rma)). Khi đơn vào `paymentStatus = REFUND_PENDING`, **hệ thống (job)/admin** gọi API hoàn tiền của cổng → nhận callback → set `Payment.status = REFUNDED` (idempotent theo `providerTxnId`) + `refundedAt` → cập nhật `Order.paymentStatus = REFUNDED`. Refund thất bại → giữ `REFUND_PENDING`, cảnh báo để xử lý tay. COD chưa thu tiền → không refund.
+> **Luồng hoàn tiền (refund):** chỉ áp dụng cho ONLINE đã `PAID` (hủy [WF-E04](./workflow.md#wf-e04-hủy-đơn-trước-xuất-kho) hoặc RMA [WF-E05](./workflow.md#wf-e05-hoàn-hàng-rma)). Khi đơn vào `paymentStatus = REFUND_PENDING`, **hệ thống (job)/admin** (nhân viên back-office `type=user`, role ⊇ {ADMIN, MANAGER} — xem [auth-wms](../auth-wms/use-cases.md)) gọi API hoàn tiền của cổng → nhận callback → set `Payment.status = REFUNDED` (idempotent theo `providerTxnId`) + `refundedAt` → cập nhật `Order.paymentStatus = REFUNDED`. Refund thất bại → giữ `REFUND_PENDING`, cảnh báo để xử lý tay. COD chưa thu tiền → không refund.
 
 ## Nhóm 4: Ba trục trạng thái
 

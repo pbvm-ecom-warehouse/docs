@@ -27,9 +27,12 @@ print_jobs                     orders
 stock_transfers                customers
 stock_counts                   carts
 suppliers                      payments
-supplier_items
-carriers
+supplier_items                 customer_refresh_tokens
+carriers                       customer_auth_tokens
 shipments
+users                          (module Auth-Ecom: customers + token)
+user_refresh_tokens
+(module Auth-WMS: users + token)
 ```
 
 > **Không bao giờ đọc chéo collection trực tiếp giữa 2 app.**
@@ -37,7 +40,9 @@ shipments
 
 > **Module Shipping (WMS)** sở hữu `carriers` (đơn vị vận chuyển) và `shipments` (vận đơn); liên kết sang đơn Ecommerce chỉ qua `orderId` (id tham chiếu) + event — không đọc chéo `ecom_db`.
 
-> Bên Ecommerce, `categories`/`products`/`product_variants`/`designs` do **module Catalog** sở hữu; `orders`/`carts`/`payments` do **module Order**; `customers` (tài khoản khách) do **module Auth** sở hữu — Order/Catalog chỉ trỏ `customerId`, **không định nghĩa schema Customer** (xem [gap-analysis](./gap-analysis.md#2-auth--user--hạng-2)). Xem [Catalog data-model](../catalog/data-model.md).
+> Bên Ecommerce, `categories`/`products`/`product_variants`/`designs` do **module Catalog** sở hữu; `orders`/`carts`/`payments` do **module Order**; `customers` (+ `customer_refresh_tokens`/`customer_auth_tokens`) do **module Auth-Ecom** sở hữu — Order/Catalog chỉ trỏ `customerId`, **không định nghĩa schema Customer** (xem [auth-ecom/data-model](../auth-ecom/data-model.md)). Xem [Catalog data-model](../catalog/data-model.md).
+
+> **Auth-WMS** sở hữu `users` (+ `user_refresh_tokens`) trong `wms_db` — **danh bạ nhân viên DUY NHẤT** cho cả kho lẫn back-office shop. Nhân viên đăng nhập nhận JWT mang claim `type = user`; route admin của app Ecommerce **validate token tại chỗ bằng shared secret** (không đọc chéo `wms_db`) — đây là cách hiện thực Actor "Admin" của [catalog UC-C05](../catalog/use-cases.md). Token khách mang `type = customer`, không qua được route admin. Xem [auth-wms/use-cases](../auth-wms/use-cases.md).
 
 ---
 
@@ -125,6 +130,8 @@ export class StockProcessor {
 | `stock.near_expiry` | WMS | Notification | Lô còn ≤ `nearExpiryDays` ngày tới hạn (job định kỳ) |
 | `stock.expired` | WMS | Ecommerce | Lô tới hạn → `expired +=`, `available` giảm → cập nhật `availableQty` |
 | `payment.success` | Ecommerce | Notification | Thanh toán thành công → email xác nhận |
+| `customer.verify_requested` | Ecommerce (Auth-Ecom) | Notification | Khách đăng ký → gửi email link xác minh ([UC-AE01](../auth-ecom/use-cases.md#uc-ae01-đăng-ký-tài-khoản)) |
+| `customer.password_reset_requested` | Ecommerce (Auth-Ecom) | Notification | Khách quên mật khẩu → gửi email link/OTP reset ([UC-AE06](../auth-ecom/use-cases.md#uc-ae06-quên-mật-khẩu)) |
 | `shipment.shipped` | WMS | Notification | Vận đơn đã bàn giao hãng → thông báo "đang giao" cho khách |
 | `shipment.delivered` | WMS | Notification | Giao thành công → thông báo "đã giao" cho khách |
 

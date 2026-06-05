@@ -14,7 +14,8 @@
 | Module                            | Use Cases                      | Data Model                              | Workflow                            |
 | --------------------------------- | ------------------------------ | --------------------------------------- | ----------------------------------- |
 | [Kho hàng (WMS)](./warehouse/)    | [UC](./warehouse/use-cases.md) | [Data Model](./warehouse/data-model.md) | [Workflow](./warehouse/workflow.md) |
-| [Auth & User](./auth/)            | —                              | —                                       | —                                   |
+| [Auth-WMS (Nhân viên)](./auth-wms/) | [UC](./auth-wms/use-cases.md)  | [Data Model](./auth-wms/data-model.md)  | [Workflow](./auth-wms/workflow.md)  |
+| [Auth-Ecom (Khách hàng)](./auth-ecom/) | [UC](./auth-ecom/use-cases.md) | [Data Model](./auth-ecom/data-model.md) | [Workflow](./auth-ecom/workflow.md) |
 | [Catalog (Ecommerce)](./catalog/) | [UC](./catalog/use-cases.md) | [Data Model](./catalog/data-model.md) | [Workflow](./catalog/workflow.md) |
 | [Đơn hàng & E-commerce](./order/) | [UC](./order/use-cases.md)     | [Data Model](./order/data-model.md)     | [Workflow](./order/workflow.md)     |
 | [Nhà cung cấp](./supplier/)       | [UC](./supplier/use-cases.md)  | [Data Model](./supplier/data-model.md)  | [Workflow](./supplier/workflow.md)  |

@@ -93,7 +93,9 @@ wms-ecom/
 
 ### Cơ chế
 
-- **JWT stateless** — mỗi app tự validate token bằng shared secret, không gọi sang app khác
+- **Access token JWT stateless** (~15 phút) — mỗi app tự validate bằng shared secret, không gọi sang app khác
+- **Refresh token lưu DB** (đã hash, `*_refresh_tokens`) — sống dài, **thu hồi được**: logout / khóa tài khoản / reset mật khẩu đều revoke. Mỗi lần refresh **xoay token**
+- **Claim `type: user | customer`** trong payload — app Ecommerce (public) phân biệt token nhân viên vs khách. Route admin Ecom bắt buộc `type = user` (+ role ⊇ {ADMIN, MANAGER}) → **back-office shop dùng chung danh bạ `users`** mà không đọc chéo `wms_db` (xem [auth-wms](../auth-wms/use-cases.md), [auth-ecom](../auth-ecom/use-cases.md))
 - Shared logic nằm trong `libs/auth/`
 
 ```
