@@ -1,0 +1,178 @@
+<mxfile host="app.diagrams.net" type="device">
+  <diagram name="P0 Receive stock" id="flow-p0-receive-stock-01">
+    <mxGraphModel dx="1400" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="950" pageHeight="650" math="0" shadow="0">
+      <root>
+        <mxCell id="r0" />
+        <mxCell id="r1" parent="r0" />
+        <mxCell id="p0t" value="P0 — Receive stock into the warehouse" style="text;html=1;align=left;fontStyle=1;fontSize=16;" vertex="1" parent="r1"><mxGeometry x="40" y="20" width="800" height="30" as="geometry"/></mxCell>
+        <mxCell id="p0ls" value="Supplier" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;opacity=40;verticalAlign=top;align=center;fontStyle=1;fontSize=13;" vertex="1" parent="r1"><mxGeometry x="40" y="70" width="220" height="480" as="geometry"/></mxCell>
+        <mxCell id="p0lw" value="Warehouse" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;opacity=40;verticalAlign=top;align=center;fontStyle=1;fontSize=13;" vertex="1" parent="r1"><mxGeometry x="300" y="70" width="260" height="480" as="geometry"/></mxCell>
+        <mxCell id="p0le" value="Online store" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;opacity=40;verticalAlign=top;align=center;fontStyle=1;fontSize=13;" vertex="1" parent="r1"><mxGeometry x="600" y="70" width="260" height="480" as="geometry"/></mxCell>
+        <mxCell id="p0po" value="1. Order goods from supplier" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;" vertex="1" parent="r1"><mxGeometry x="320" y="110" width="220" height="60" as="geometry"/></mxCell>
+        <mxCell id="p0del" value="2. Deliver the goods" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;" vertex="1" parent="r1"><mxGeometry x="50" y="210" width="200" height="60" as="geometry"/></mxCell>
+        <mxCell id="p0recv" value="3. Receive &amp; check the goods" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;" vertex="1" parent="r1"><mxGeometry x="320" y="310" width="220" height="60" as="geometry"/></mxCell>
+        <mxCell id="p0shelf" value="4. Put items on shelves" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;" vertex="1" parent="r1"><mxGeometry x="320" y="410" width="220" height="60" as="geometry"/></mxCell>
+        <mxCell id="p0store" value="5. Product shows as &quot;In stock&quot;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;" vertex="1" parent="r1"><mxGeometry x="620" y="410" width="220" height="60" as="geometry"/></mxCell>
+        <mxCell id="p0e1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#333333;" edge="1" parent="r1" source="p0po" target="p0del"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="p0e2" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#333333;" edge="1" parent="r1" source="p0del" target="p0recv"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="p0e3" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#333333;" edge="1" parent="r1" source="p0recv" target="p0shelf"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="p0e4" value="stock updated" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;dashed=1;endArrow=block;strokeColor=#6c8ebf;fontColor=#3a5a8c;fontSize=11;" edge="1" parent="r1" source="p0shelf" target="p0store"><mxGeometry relative="1" as="geometry"/></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+
+  <diagram name="P1 Browse" id="flow-p1-browse-search-02">
+    <mxGraphModel dx="1400" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="500" math="0" shadow="0">
+      <root>
+        <mxCell id="r0" />
+        <mxCell id="r1" parent="r0" />
+        <mxCell id="p1t" value="P1 — Browse and search" style="text;html=1;align=left;fontStyle=1;fontSize=16;" vertex="1" parent="r1"><mxGeometry x="40" y="20" width="700" height="30" as="geometry"/></mxCell>
+        <mxCell id="p1lc" value="Customer" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;opacity=40;verticalAlign=top;align=center;fontStyle=1;fontSize=13;" vertex="1" parent="r1"><mxGeometry x="40" y="70" width="260" height="320" as="geometry"/></mxCell>
+        <mxCell id="p1ls" value="Online store" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;opacity=40;verticalAlign=top;align=center;fontStyle=1;fontSize=13;" vertex="1" parent="r1"><mxGeometry x="320" y="70" width="380" height="320" as="geometry"/></mxCell>
+        <mxCell id="p1s" value="1. Search or browse products" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#666666;" vertex="1" parent="r1"><mxGeometry x="50" y="110" width="240" height="60" as="geometry"/></mxCell>
+        <mxCell id="p1show" value="2. Show only products that are in stock" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;" vertex="1" parent="r1"><mxGeometry x="340" y="110" width="340" height="60" as="geometry"/></mxCell>
+        <mxCell id="p1list" value="3. See the product list" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#666666;" vertex="1" parent="r1"><mxGeometry x="50" y="220" width="240" height="60" as="geometry"/></mxCell>
+        <mxCell id="p1e1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#333333;" edge="1" parent="r1" source="p1s" target="p1show"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="p1e2" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#333333;" edge="1" parent="r1" source="p1show" target="p1list"><mxGeometry relative="1" as="geometry"/></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+
+  <diagram name="P2 Choose product" id="flow-p2-choose-product-03">
+    <mxGraphModel dx="1400" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="700" math="0" shadow="0">
+      <root>
+        <mxCell id="r0" />
+        <mxCell id="r1" parent="r0" />
+        <mxCell id="p2t" value="P2 — Choose a product" style="text;html=1;align=left;fontStyle=1;fontSize=16;" vertex="1" parent="r1"><mxGeometry x="40" y="20" width="700" height="30" as="geometry"/></mxCell>
+        <mxCell id="p2lc" value="Customer" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;opacity=40;verticalAlign=top;align=center;fontStyle=1;fontSize=13;" vertex="1" parent="r1"><mxGeometry x="40" y="70" width="320" height="470" as="geometry"/></mxCell>
+        <mxCell id="p2ls" value="Online store" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;opacity=40;verticalAlign=top;align=center;fontStyle=1;fontSize=13;" vertex="1" parent="r1"><mxGeometry x="380" y="70" width="320" height="470" as="geometry"/></mxCell>
+        <mxCell id="p2open" value="1. Open a product" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#666666;" vertex="1" parent="r1"><mxGeometry x="50" y="110" width="300" height="60" as="geometry"/></mxCell>
+        <mxCell id="p2var" value="2. Pick a variant (size / color)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#666666;" vertex="1" parent="r1"><mxGeometry x="50" y="210" width="300" height="60" as="geometry"/></mxCell>
+        <mxCell id="p2design" value="3. Custom-print cup? Choose or upload a design" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="r1"><mxGeometry x="50" y="310" width="300" height="60" as="geometry"/></mxCell>
+        <mxCell id="p2cart" value="4. Add to cart" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#666666;" vertex="1" parent="r1"><mxGeometry x="50" y="410" width="300" height="60" as="geometry"/></mxCell>
+        <mxCell id="p2saved" value="Cart saved (stock is NOT held yet)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;" vertex="1" parent="r1"><mxGeometry x="390" y="410" width="300" height="60" as="geometry"/></mxCell>
+        <mxCell id="p2e1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#333333;" edge="1" parent="r1" source="p2open" target="p2var"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="p2e2" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#333333;" edge="1" parent="r1" source="p2var" target="p2design"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="p2e3" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#333333;" edge="1" parent="r1" source="p2design" target="p2cart"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="p2e4" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#333333;" edge="1" parent="r1" source="p2cart" target="p2saved"><mxGeometry relative="1" as="geometry"/></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+
+  <diagram name="P3 Place order" id="flow-p3-place-order-04">
+    <mxGraphModel dx="1400" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1000" pageHeight="700" math="0" shadow="0">
+      <root>
+        <mxCell id="r0" />
+        <mxCell id="r1" parent="r0" />
+        <mxCell id="p3t" value="P3 — Place the order (stock is held right away)" style="text;html=1;align=left;fontStyle=1;fontSize=16;" vertex="1" parent="r1"><mxGeometry x="40" y="20" width="800" height="30" as="geometry"/></mxCell>
+        <mxCell id="p3lc" value="Customer" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;opacity=40;verticalAlign=top;align=center;fontStyle=1;fontSize=13;" vertex="1" parent="r1"><mxGeometry x="40" y="70" width="260" height="480" as="geometry"/></mxCell>
+        <mxCell id="p3ls" value="Online store" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;opacity=40;verticalAlign=top;align=center;fontStyle=1;fontSize=13;" vertex="1" parent="r1"><mxGeometry x="320" y="70" width="300" height="480" as="geometry"/></mxCell>
+        <mxCell id="p3lw" value="Warehouse" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;opacity=40;verticalAlign=top;align=center;fontStyle=1;fontSize=13;" vertex="1" parent="r1"><mxGeometry x="640" y="70" width="280" height="480" as="geometry"/></mxCell>
+        <mxCell id="p3addr" value="1. Enter address &amp; choose payment (COD or pay online)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#666666;" vertex="1" parent="r1"><mxGeometry x="50" y="110" width="240" height="70" as="geometry"/></mxCell>
+        <mxCell id="p3check" value="2. Check there is enough stock" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;" vertex="1" parent="r1"><mxGeometry x="330" y="220" width="280" height="60" as="geometry"/></mxCell>
+        <mxCell id="p3hold" value="3. Hold the stock for this order" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontStyle=1;" vertex="1" parent="r1"><mxGeometry x="650" y="220" width="260" height="60" as="geometry"/></mxCell>
+        <mxCell id="p3order" value="4. Create the order" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;" vertex="1" parent="r1"><mxGeometry x="330" y="320" width="280" height="60" as="geometry"/></mxCell>
+        <mxCell id="p3avail" value="5. Available count goes down" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;" vertex="1" parent="r1"><mxGeometry x="330" y="420" width="280" height="60" as="geometry"/></mxCell>
+        <mxCell id="p3done" value="Order created" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#666666;" vertex="1" parent="r1"><mxGeometry x="50" y="420" width="240" height="60" as="geometry"/></mxCell>
+        <mxCell id="p3e1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#333333;" edge="1" parent="r1" source="p3addr" target="p3check"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="p3e2" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#333333;" edge="1" parent="r1" source="p3check" target="p3hold"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="p3e3" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#333333;" edge="1" parent="r1" source="p3hold" target="p3order"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="p3e4" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#333333;" edge="1" parent="r1" source="p3order" target="p3avail"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="p3e5" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#333333;" edge="1" parent="r1" source="p3order" target="p3done"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="p3note" value="Stock is held the moment the order is placed — even before payment (both COD and pay-online)." style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fffde7;strokeColor=#cccccc;align=left;verticalAlign=top;spacingLeft=8;spacingTop=6;fontSize=11;" vertex="1" parent="r1"><mxGeometry x="40" y="560" width="880" height="40" as="geometry"/></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+
+  <diagram name="P4 Payment" id="flow-p4-payment-05">
+    <mxGraphModel dx="1400" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1200" pageHeight="750" math="0" shadow="0">
+      <root>
+        <mxCell id="r0" />
+        <mxCell id="r1" parent="r0" />
+        <mxCell id="p4t" value="P4 — Payment and confirmation" style="text;html=1;align=left;fontStyle=1;fontSize=16;" vertex="1" parent="r1"><mxGeometry x="40" y="20" width="800" height="30" as="geometry"/></mxCell>
+        <mxCell id="p4lc" value="Customer" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;opacity=40;verticalAlign=top;align=center;fontStyle=1;fontSize=13;" vertex="1" parent="r1"><mxGeometry x="40" y="70" width="220" height="560" as="geometry"/></mxCell>
+        <mxCell id="p4ls" value="Online store" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;opacity=40;verticalAlign=top;align=center;fontStyle=1;fontSize=13;" vertex="1" parent="r1"><mxGeometry x="280" y="70" width="300" height="560" as="geometry"/></mxCell>
+        <mxCell id="p4lw" value="Warehouse" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;opacity=40;verticalAlign=top;align=center;fontStyle=1;fontSize=13;" vertex="1" parent="r1"><mxGeometry x="600" y="70" width="240" height="560" as="geometry"/></mxCell>
+        <mxCell id="p4ln" value="Notification" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;opacity=40;verticalAlign=top;align=center;fontStyle=1;fontSize=13;" vertex="1" parent="r1"><mxGeometry x="860" y="70" width="240" height="560" as="geometry"/></mxCell>
+        <mxCell id="p4pay" value="Pay online" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#666666;" vertex="1" parent="r1"><mxGeometry x="50" y="110" width="200" height="60" as="geometry"/></mxCell>
+        <mxCell id="p4conf" value="Order confirmed" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;" vertex="1" parent="r1"><mxGeometry x="300" y="110" width="260" height="60" as="geometry"/></mxCell>
+        <mxCell id="p4email" value="Send confirmation email" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d79b00;" vertex="1" parent="r1"><mxGeometry x="870" y="210" width="220" height="60" as="geometry"/></mxCell>
+        <mxCell id="p4q" value="Custom-print cup?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="r1"><mxGeometry x="350" y="210" width="160" height="80" as="geometry"/></mxCell>
+        <mxCell id="p4print" value="Yes → send to printing (P5)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;" vertex="1" parent="r1"><mxGeometry x="610" y="320" width="220" height="60" as="geometry"/></mxCell>
+        <mxCell id="p4ready" value="No → ready to pack" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;" vertex="1" parent="r1"><mxGeometry x="300" y="320" width="260" height="60" as="geometry"/></mxCell>
+        <mxCell id="p4cod" value="COD: place order" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#666666;" vertex="1" parent="r1"><mxGeometry x="50" y="430" width="200" height="60" as="geometry"/></mxCell>
+        <mxCell id="p4codr" value="Order confirmed, ready to pack" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;" vertex="1" parent="r1"><mxGeometry x="300" y="430" width="260" height="60" as="geometry"/></mxCell>
+        <mxCell id="p4to" value="Not paid in time → order cancelled, stock released" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="r1"><mxGeometry x="300" y="540" width="260" height="70" as="geometry"/></mxCell>
+        <mxCell id="p4e1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#333333;" edge="1" parent="r1" source="p4pay" target="p4conf"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="p4e2" value="email" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;dashed=1;endArrow=block;strokeColor=#d79b00;fontColor=#a06800;fontSize=11;" edge="1" parent="r1" source="p4conf" target="p4email"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="p4e3" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#333333;" edge="1" parent="r1" source="p4conf" target="p4q"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="p4e4" value="yes" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#333333;fontSize=11;" edge="1" parent="r1" source="p4q" target="p4print"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="p4e5" value="no" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#333333;fontSize=11;" edge="1" parent="r1" source="p4q" target="p4ready"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="p4e6" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#333333;" edge="1" parent="r1" source="p4cod" target="p4codr"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="p4e7" value="if unpaid" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;dashed=1;endArrow=block;strokeColor=#b85450;fontColor=#b85450;fontSize=11;" edge="1" parent="r1" source="p4conf" target="p4to"><mxGeometry relative="1" as="geometry"/></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+
+  <diagram name="P5 Print cups" id="flow-p5-print-cups-06">
+    <mxGraphModel dx="1400" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="700" math="0" shadow="0">
+      <root>
+        <mxCell id="r0" />
+        <mxCell id="r1" parent="r0" />
+        <mxCell id="p5t" value="P5 — Print the cups (only for custom-print orders)" style="text;html=1;align=left;fontStyle=1;fontSize=16;" vertex="1" parent="r1"><mxGeometry x="40" y="20" width="800" height="30" as="geometry"/></mxCell>
+        <mxCell id="p5lw" value="Warehouse" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;opacity=40;verticalAlign=top;align=center;fontStyle=1;fontSize=13;" vertex="1" parent="r1"><mxGeometry x="40" y="70" width="280" height="540" as="geometry"/></mxCell>
+        <mxCell id="p5lp" value="Printer" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;opacity=40;verticalAlign=top;align=center;fontStyle=1;fontSize=13;" vertex="1" parent="r1"><mxGeometry x="340" y="70" width="280" height="540" as="geometry"/></mxCell>
+        <mxCell id="p5req" value="1. Receive the print request" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;" vertex="1" parent="r1"><mxGeometry x="50" y="110" width="260" height="60" as="geometry"/></mxCell>
+        <mxCell id="p5take" value="2. Set aside blank cups for this order" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;" vertex="1" parent="r1"><mxGeometry x="50" y="210" width="260" height="60" as="geometry"/></mxCell>
+        <mxCell id="p5print" value="3. Print the design" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#666666;" vertex="1" parent="r1"><mxGeometry x="350" y="310" width="260" height="60" as="geometry"/></mxCell>
+        <mxCell id="p5ready" value="4. Printed cups are ready for the order" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;" vertex="1" parent="r1"><mxGeometry x="50" y="410" width="260" height="60" as="geometry"/></mxCell>
+        <mxCell id="p5done" value="5. Order is ready to pack" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="r1"><mxGeometry x="50" y="510" width="260" height="60" as="geometry"/></mxCell>
+        <mxCell id="p5e1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#333333;" edge="1" parent="r1" source="p5req" target="p5take"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="p5e2" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#333333;" edge="1" parent="r1" source="p5take" target="p5print"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="p5e3" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#333333;" edge="1" parent="r1" source="p5print" target="p5ready"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="p5e4" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#333333;" edge="1" parent="r1" source="p5ready" target="p5done"><mxGeometry relative="1" as="geometry"/></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+
+  <diagram name="P6 Pick and pack" id="flow-p6-pick-pack-07">
+    <mxGraphModel dx="1400" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="600" math="0" shadow="0">
+      <root>
+        <mxCell id="r0" />
+        <mxCell id="r1" parent="r0" />
+        <mxCell id="p6t" value="P6 — Pick and pack the order" style="text;html=1;align=left;fontStyle=1;fontSize=16;" vertex="1" parent="r1"><mxGeometry x="40" y="20" width="700" height="30" as="geometry"/></mxCell>
+        <mxCell id="p6ls" value="Online store" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;opacity=40;verticalAlign=top;align=center;fontStyle=1;fontSize=13;" vertex="1" parent="r1"><mxGeometry x="40" y="70" width="260" height="420" as="geometry"/></mxCell>
+        <mxCell id="p6lw" value="Warehouse" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;opacity=40;verticalAlign=top;align=center;fontStyle=1;fontSize=13;" vertex="1" parent="r1"><mxGeometry x="320" y="70" width="280" height="420" as="geometry"/></mxCell>
+        <mxCell id="p6ready" value="1. Order is ready to pack" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;" vertex="1" parent="r1"><mxGeometry x="50" y="110" width="240" height="60" as="geometry"/></mxCell>
+        <mxCell id="p6pick" value="2. Pick the items from the shelves" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;" vertex="1" parent="r1"><mxGeometry x="330" y="210" width="260" height="60" as="geometry"/></mxCell>
+        <mxCell id="p6conf" value="3. Confirm the items are taken out" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;" vertex="1" parent="r1"><mxGeometry x="330" y="310" width="260" height="60" as="geometry"/></mxCell>
+        <mxCell id="p6done" value="4. Order is packed &amp; on its way out" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="r1"><mxGeometry x="50" y="410" width="240" height="60" as="geometry"/></mxCell>
+        <mxCell id="p6e1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#333333;" edge="1" parent="r1" source="p6ready" target="p6pick"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="p6e2" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#333333;" edge="1" parent="r1" source="p6pick" target="p6conf"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="p6e3" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#333333;" edge="1" parent="r1" source="p6conf" target="p6done"><mxGeometry relative="1" as="geometry"/></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+
+  <diagram name="P7 Delivery" id="flow-p7-delivery-08">
+    <mxGraphModel dx="1400" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1000" pageHeight="700" math="0" shadow="0">
+      <root>
+        <mxCell id="r0" />
+        <mxCell id="r1" parent="r0" />
+        <mxCell id="p7t" value="P7 — Delivery and close" style="text;html=1;align=left;fontStyle=1;fontSize=16;" vertex="1" parent="r1"><mxGeometry x="40" y="20" width="700" height="30" as="geometry"/></mxCell>
+        <mxCell id="p7lw" value="Warehouse / Carrier" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;opacity=40;verticalAlign=top;align=center;fontStyle=1;fontSize=13;" vertex="1" parent="r1"><mxGeometry x="40" y="70" width="280" height="520" as="geometry"/></mxCell>
+        <mxCell id="p7lc" value="Customer" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;opacity=40;verticalAlign=top;align=center;fontStyle=1;fontSize=13;" vertex="1" parent="r1"><mxGeometry x="340" y="70" width="260" height="520" as="geometry"/></mxCell>
+        <mxCell id="p7ln" value="Notification" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;opacity=40;verticalAlign=top;align=center;fontStyle=1;fontSize=13;" vertex="1" parent="r1"><mxGeometry x="620" y="70" width="240" height="520" as="geometry"/></mxCell>
+        <mxCell id="p7ship" value="1. Hand the parcel to the carrier" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;" vertex="1" parent="r1"><mxGeometry x="50" y="110" width="260" height="60" as="geometry"/></mxCell>
+        <mxCell id="p7notif" value="Tell the customer: shipped" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d79b00;" vertex="1" parent="r1"><mxGeometry x="630" y="210" width="220" height="60" as="geometry"/></mxCell>
+        <mxCell id="p7recv" value="2. Customer receives the goods" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#666666;" vertex="1" parent="r1"><mxGeometry x="350" y="310" width="240" height="60" as="geometry"/></mxCell>
+        <mxCell id="p7done" value="3. Delivered &amp; order closed (COD: paid on delivery)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;" vertex="1" parent="r1"><mxGeometry x="50" y="410" width="260" height="70" as="geometry"/></mxCell>
+        <mxCell id="p7fail" value="If delivery fails → goods returned, order cancelled" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="r1"><mxGeometry x="50" y="510" width="260" height="60" as="geometry"/></mxCell>
+        <mxCell id="p7e1" value="shipped" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;dashed=1;endArrow=block;strokeColor=#6c8ebf;fontColor=#3a5a8c;fontSize=11;" edge="1" parent="r1" source="p7ship" target="p7notif"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="p7e2" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#333333;" edge="1" parent="r1" source="p7ship" target="p7recv"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="p7e3" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#333333;" edge="1" parent="r1" source="p7recv" target="p7done"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="p7e4" value="if it fails" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;dashed=1;endArrow=block;strokeColor=#b85450;fontColor=#b85450;fontSize=11;" edge="1" parent="r1" source="p7ship" target="p7fail"><mxGeometry relative="1" as="geometry"/></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
