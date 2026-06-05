@@ -6,8 +6,10 @@
 | ------------------------------------------------ | ------------------------------------------------- |
 | [System Context](./overview/system-context.md)   | Kiến trúc tổng thể, Nginx, BullMQ, Infrastructure |
 | [NestJS Monorepo](./overview/nestjs-monorepo.md) | Monorepo mode, Auth tách biệt WMS vs Ecommerce    |
-| [Data Ownership](./overview/data-ownership.md)   | Phân chia collection, sync tồn kho qua event      |
+| [Data Ownership](./overview/data-ownership.md)   | Phân chia collection, sync tồn kho qua event, Quy ước Audit |
 | [Main Flow](./overview/main-flow.md)             | Luồng nghiệp vụ end-to-end toàn hệ thống (P0→P7)   |
+| [DB Guide](./db/)                                | **Giải thích sâu 45 bảng** (tại sao + ví dụ) — đọc theo dòng nghiệp vụ |
+| [ERD](./overview/erd.dbml)                       | Sơ đồ ER: [erd.dbml](./overview/erd.dbml) (dbdiagram.io) · [erd.md](./overview/erd.md) (Mermaid) · [concept](./overview/erd-concept.md) |
 
 ## Danh mục module
 
@@ -21,6 +23,20 @@
 | [Nhà cung cấp](./supplier/)       | [UC](./supplier/use-cases.md)  | [Data Model](./supplier/data-model.md)  | [Workflow](./supplier/workflow.md)  |
 | [Vận chuyển](./shipping/)         | [UC](./shipping/use-cases.md)  | [Data Model](./shipping/data-model.md)  | [Workflow](./shipping/workflow.md)  |
 | [Báo cáo](./report/)              | —                              | —                                       | —                                   |
+
+## DB Guide — giải thích sâu cơ sở dữ liệu
+
+> Bộ [db/](./db/) đào sâu **tại sao** thiết kế từng bảng (kèm ví dụ số liệu), khác với `*/data-model.md` (chỉ định nghĩa schema). Đọc theo **dòng nghiệp vụ**, bắt đầu từ khái niệm lõi.
+
+| # | Bài | # | Bài |
+|---|---|---|---|
+| 00 | [Khái niệm lõi](./db/00-khai-niem-loi.md) | 07 | [Shipping](./db/07-shipping.md) |
+| 01 | [Kho & vị trí](./db/01-kho-va-vi-tri.md) | 08 | [Auth-WMS](./db/08-auth-wms.md) |
+| 02 | [Hàng hóa & tồn 2 lớp](./db/02-hang-hoa-va-ton-kho.md) | 09 | [Catalog](./db/09-catalog.md) |
+| 03 | [Nhập kho](./db/03-nhap-kho.md) | 10 | [Order](./db/10-order.md) |
+| 04 | [In ly](./db/04-in-ly.md) | 11 | [Auth-Ecom](./db/11-auth-ecom.md) |
+| 05 | [Xuất kho & nội bộ](./db/05-xuat-kho-va-noi-bo.md) | 12 | [Luồng end-to-end](./db/12-luong-end-to-end.md) |
+| 06 | [Supplier](./db/06-supplier.md) | | [⌂ Index db/](./db/README.md) |
 
 ## Danh mục hàng hóa
 
