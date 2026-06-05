@@ -26,7 +26,7 @@ goods_issues                   designs
 print_jobs                     orders
 stock_transfers                customers
 stock_counts                   carts
-suppliers                      payments
+suppliers                      payment_transactions
 supplier_items                 customer_refresh_tokens
 carriers                       customer_auth_tokens
 shipments
@@ -40,7 +40,7 @@ user_refresh_tokens
 
 > **Module Shipping (WMS)** sở hữu `carriers` (đơn vị vận chuyển) và `shipments` (vận đơn); liên kết sang đơn Ecommerce chỉ qua `orderId` (id tham chiếu) + event — không đọc chéo `ecom_db`.
 
-> Bên Ecommerce, `categories`/`products`/`product_variants`/`designs` do **module Catalog** sở hữu; `orders`/`carts`/`payments` do **module Order**; `customers` (+ `customer_refresh_tokens`/`customer_auth_tokens`) do **module Auth-Ecom** sở hữu — Order/Catalog chỉ trỏ `customerId`, **không định nghĩa schema Customer** (xem [auth-ecom/data-model](../auth-ecom/data-model.md)). Xem [Catalog data-model](../catalog/data-model.md).
+> Bên Ecommerce, `categories`/`products`/`product_variants`/`designs` do **module Catalog** sở hữu; `orders`/`carts`/`payment_transactions` do **module Order**; `customers` (+ `customer_refresh_tokens`/`customer_auth_tokens`) do **module Auth-Ecom** sở hữu — Order/Catalog chỉ trỏ `customerId`, **không định nghĩa schema Customer** (xem [auth-ecom/data-model](../auth-ecom/data-model.md)). Xem [Catalog data-model](../catalog/data-model.md).
 
 > **Auth-WMS** sở hữu `users` (+ `user_refresh_tokens`) trong `wms_db` — **danh bạ nhân viên DUY NHẤT** cho cả kho lẫn back-office shop. Nhân viên đăng nhập nhận JWT mang claim `type = user`; route admin của app Ecommerce **validate token tại chỗ bằng shared secret** (không đọc chéo `wms_db`) — đây là cách hiện thực Actor "Admin" của [catalog UC-C05](../catalog/use-cases.md). Token khách mang `type = customer`, không qua được route admin. Xem [auth-wms/use-cases](../auth-wms/use-cases.md).
 

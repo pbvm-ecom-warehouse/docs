@@ -2,7 +2,7 @@
 
 > Trạng thái: 🔄 Đang phân tích — theo spec [2026-06-04-ecommerce-order-module-design](../superpowers/specs/2026-06-04-ecommerce-order-module-design.md)
 
-> **Ownership:** Module Order sở hữu `carts`/`orders`/`payments`. `customerId` trỏ tài khoản khách (`customers`) do **module Auth** sở hữu — Order **không định nghĩa schema Customer**, chỉ tham chiếu id. Liên kết WMS **chỉ qua `sku`** + `printJobId`/`fulfillWarehouseId` — không đọc chéo collection. Xem [data-ownership](../overview/data-ownership.md).
+> **Ownership:** Module Order sở hữu `carts`/`orders`/`payment_transactions`. `customerId` trỏ tài khoản khách (`customers`) do **module Auth-Ecom** sở hữu — Order **không định nghĩa schema Customer**, chỉ tham chiếu id. Liên kết WMS **chỉ qua `sku`** + `printJobId`/`fulfillWarehouseId` — không đọc chéo collection. Xem [data-ownership](../overview/data-ownership.md).
 
 ## Nhóm 1: Giỏ hàng
 
@@ -74,22 +74,30 @@
 
 ## Nhóm 3: Thanh toán
 
-### Payment
+### PaymentTransaction (`payment_transactions`) — sổ cái append-only
+
+> **Sổ cái tiền bất biến** kiểu [`stock_movements`](../warehouse/data-model.md): mỗi biến động tiền = **1 dòng**, **không sửa/xóa** sau khi ghi. Nguồn chân lý tiền của đơn. Thay cho collection `payments` ghi-đè status trước đây. Spec: [payment-ledger-design](../superpowers/specs/2026-06-05-payment-ledger-design.md).
 
 | Field | Type | Mô tả |
 |---|---|---|
 | id | ObjectId | |
-| orderId | ObjectId | |
-| method | Enum | `COD` / `ONLINE` |
-| provider | String | VNPay / Momo... (null nếu COD) |
-| amount | Number | |
-| status | Enum | `INIT` / `SUCCESS` / `FAILED` / `REFUNDED` |
-| providerTxnId | String | Mã giao dịch cổng — **khóa idempotency** webhook |
-| paidAt | DateTime | |
-| refundedAt | DateTime | Thời điểm hoàn tiền (khi `status = REFUNDED`) |
-| raw | Object | Payload webhook (lưu đối soát) |
+| orderId | ObjectId | → Order |
+| type | Enum | `CHARGE` / `REFUND` / `COD_COLLECT` |
+| status | Enum | `SUCCESS` / `FAILED` / `PENDING` (PENDING chỉ cho REFUND chờ callback) |
+| method | Enum | `ONLINE` / `COD` |
+| amount | Number | luôn **dương**; hướng tiền suy từ `type` (CHARGE/COD_COLLECT = thu vào, REFUND = trả ra) |
+| providerTxnId | String? | **unique** (online) — khóa idempotency callback cổng (null nếu COD) |
+| idempotencyKey | String | duy nhất mỗi dòng; COD_COLLECT = `orderId + delivery`, retry-fail có key riêng |
+| gatewayPayload | Object? | snapshot payload cổng (đối soát) |
+| createdAt | DateTime | bất biến |
 
-> **Luồng hoàn tiền (refund):** chỉ áp dụng cho ONLINE đã `PAID` (hủy [WF-E04](./workflow.md#wf-e04-hủy-đơn-trước-xuất-kho) hoặc RMA [WF-E05](./workflow.md#wf-e05-hoàn-hàng-rma)). Khi đơn vào `paymentStatus = REFUND_PENDING`, **hệ thống (job)/admin** (nhân viên back-office `type=user`, role ⊇ {ADMIN, MANAGER} — xem [auth-wms](../auth-wms/use-cases.md)) gọi API hoàn tiền của cổng → nhận callback → set `Payment.status = REFUNDED` (idempotent theo `providerTxnId`) + `refundedAt` → cập nhật `Order.paymentStatus = REFUNDED`. Refund thất bại → giữ `REFUND_PENDING`, cảnh báo để xử lý tay. COD chưa thu tiền → không refund.
+> **`Order.paymentStatus` là cache dẫn xuất** từ sổ cái (không phải nguồn chân lý) — recompute trong cùng transaction mỗi lần append dòng `SUCCESS`/`PENDING`:
+> - chưa có `CHARGE`/`COD_COLLECT` SUCCESS → `UNPAID`
+> - có `CHARGE` SUCCESS (online) **hoặc** `COD_COLLECT` SUCCESS (COD lúc `shipment.delivered`) → `PAID`
+> - có `REFUND` PENDING → `REFUND_PENDING`; `REFUND` SUCCESS (đủ amount) → `REFUNDED`
+> - dòng `FAILED` chỉ lưu vết audit, **không** đổi `paymentStatus`
+
+> **Luồng hoàn tiền (refund):** chỉ áp dụng cho ONLINE đã `PAID` (hủy [WF-E04](./workflow.md#wf-e04-hủy-đơn-trước-xuất-kho) hoặc RMA [WF-E05](./workflow.md#wf-e05-hoàn-hàng-rma)). Khi đơn vào `paymentStatus = REFUND_PENDING`, **hệ thống (job)/admin** (nhân viên back-office `type=user`, role ⊇ {ADMIN, MANAGER} — xem [auth-wms](../auth-wms/use-cases.md)) gọi API hoàn tiền của cổng → append `REFUND/PENDING` → nhận callback → append `REFUND/SUCCESS` (idempotent theo `providerTxnId`) → recompute `Order.paymentStatus = REFUNDED`. Refund thất bại → giữ `REFUND_PENDING`, cảnh báo để xử lý tay. COD chưa thu tiền (chưa có dòng `COD_COLLECT`) → không refund.
 
 ## Nhóm 4: Ba trục trạng thái
 

@@ -34,7 +34,7 @@ grep -ohE '\]\(\.\.?/[^)#]+\.md' <file>.md
 
 - **Mỗi module nghiệp vụ = 1 thư mục** với bộ 3 file: `use-cases.md` + `data-model.md` + `workflow.md`. Module đã chín: [warehouse/](warehouse/) (WMS), [catalog/](catalog/), [order/](order/), [supplier/](supplier/).
 - **Vùng chưa làm:** xem [overview/gap-analysis.md](overview/gap-analysis.md) — bản đồ 5 vùng thiếu + thứ tự ưu tiên (shipping → auth → supplier ✅ → notification → report).
-- **Ownership dữ liệu:** WMS sở hữu warehouse/inventory/suppliers...; Ecommerce sở hữu catalog (module Catalog) + orders/carts/payments (module Order) + customers (module Auth). Cập nhật [data-ownership.md](overview/data-ownership.md) mỗi khi thêm/đổi collection.
+- **Ownership dữ liệu:** WMS sở hữu warehouse/inventory/suppliers... + `users` (module Auth-WMS); Ecommerce sở hữu catalog (module Catalog) + orders/carts/`payment_transactions` (module Order) + customers (module Auth-Ecom). Cập nhật [data-ownership.md](overview/data-ownership.md) mỗi khi thêm/đổi collection.
 - [README.md](README.md) là mục lục — cập nhật bảng module khi thêm tài liệu mới.
 
 ## Quy ước khi sửa tài liệu

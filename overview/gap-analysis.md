@@ -57,4 +57,4 @@
 - **Khuyến mãi/voucher/discount (Order):** chưa mô hình hóa; `Order` giữ `subtotal/shippingFee/total`.
 - **`shippingFee`:** nguồn tính phí phụ thuộc module **Shipping** (Hạng 1); checkout tạm chưa tự tính.
 - **RMA từng phần, partial fulfillment, guest checkout, thuế/VAT:** ngoài phạm vi hiện tại.
-- **Sổ cái tiền `payment_transactions` (append-only):** đang dùng `payments` ghi-đè status (đủ cho full-refund). Xem xét tách sổ cái append-only kiểu `stock_movements` để đối soát dòng tiền/COD/cổng — **brainstorm riêng cho module Order/Payment** (nối tiếp spec Auth).
+- **Sổ cái tiền `payment_transactions` (append-only)** ✅ Đã thiết kế — thay `payments` ghi-đè bằng sổ cái bất biến (CHARGE/REFUND/COD_COLLECT, gồm FAILED); `Order.paymentStatus` thành cache dẫn xuất. Spec: [payment-ledger-design](../superpowers/specs/2026-06-05-payment-ledger-design.md). *(Đối soát remittance COD/hãng vẫn YAGNI.)*

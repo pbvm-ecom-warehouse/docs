@@ -36,7 +36,7 @@
 3. `validateStock` sơ bộ theo `availableQty`
 4. Hệ chọn kho có `available ≥ qty` (ưu tiên `CENTRAL`) → **transaction atomic xuyên 2 DB**: `reserved += qty` trên `wms_db.stock_balances` + `availableQty −= qty` trên `ecom_db.product_variants` (Ecom tự trừ bản copy, không qua event); lưu `fulfillWarehouseId`
 5. Tạo `Order{orderStatus: PLACED, paymentStatus: UNPAID, fulfillmentStatus: NONE}` + snapshot giá/địa chỉ; phát `order.placed` (**thông báo thuần** — tồn đã giữ trong transaction, WMS không reserve lại)
-6. Khởi tạo `Payment`
+6. Chưa ghi sổ tiền lúc này — `payment_transactions` chỉ append khi có biến động thật (CHARGE lúc trả online / COD_COLLECT lúc giao)
 7. Reserve fail (đua mua món cuối) → rollback, **không tạo đơn**, báo hết hàng
 
 ---
@@ -48,7 +48,7 @@
 
 ### Luồng chính — ONLINE
 1. Khách chuyển sang cổng (VNPay/Momo) trả `total`
-2. Cổng gọi webhook → Payment xử lý **idempotent** theo `providerTxnId` → `Payment.status = SUCCESS`, `Order.paymentStatus = PAID`
+2. Cổng gọi webhook → xử lý **idempotent** theo `providerTxnId` → append `payment_transactions{type: CHARGE, status: SUCCESS}` → recompute `Order.paymentStatus = PAID` (trả lỗi → append `CHARGE/FAILED`, không đổi trạng thái)
 3. `orderStatus → CONFIRMED`
 4. Nếu `hasPrintItems` → phát `print.requested` (WMS mở PrintJob/UC-04) → `fulfillmentStatus = AWAITING_PRINT`; ngược lại → `READY_TO_PICK` → phát `order.ready_to_fulfill` (WMS sinh GoodsIssue)
 5. Quá `paymentDeadline` chưa `PAID` (mặc định ~30 phút, cấu hình được) → tự phát `order.cancelled` (release reserve) → `orderStatus = CANCELLED`. Bao trùm cả case khách trả lỗi/bỏ dở giữa chừng.
@@ -56,7 +56,7 @@
 ### Luồng chính — COD
 1. Đơn chỉ gồm hàng sẵn (ly-in đã bị chặn ở UC-E02)
 2. `orderStatus → CONFIRMED` ngay sau đặt; `fulfillmentStatus = READY_TO_PICK` → phát `order.ready_to_fulfill` (WMS sinh GoodsIssue)
-3. `paymentStatus` giữ `UNPAID` đến khi `DELIVERED` → `PAID`
+3. `paymentStatus` giữ `UNPAID` đến khi `DELIVERED`: consumer `shipment.delivered` append `payment_transactions{type: COD_COLLECT, status: SUCCESS}` → recompute `PAID`
 
 ---
 

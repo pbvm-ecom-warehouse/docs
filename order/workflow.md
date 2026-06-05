@@ -31,7 +31,7 @@ KHÁCH                     CHECKOUT                  WMS (stock_balances)
   |                    Tạo Order{PLACED, UNPAID, NONE}    |
   |                    fulfillWarehouseId; order.placed (thông báo thuần)
 
-  |                    Khởi tạo Payment                   |
+  |        (chưa ghi sổ tiền — payment_transactions append khi có biến động thật)
   |<-- Đơn đã tạo -----------|                           |
 ```
 > Reserve fail → rollback, không tạo đơn.
@@ -46,7 +46,7 @@ KHÁCH                  PAYMENT / ORDER             WMS
   | [ONLINE]                 |                       |
   |-- Trả qua cổng --------->|                       |
   |                    Webhook (idempotent txnId)    |
-  |                    paymentStatus → PAID           |
+  |                    append CHARGE/SUCCESS → recompute paymentStatus → PAID
   |                    orderStatus → CONFIRMED        |
   |                    Có ly-in? --yes--> print.requested -->| mở PrintJob (UC-04)
   |                    fulfillment → AWAITING_PRINT   |
@@ -76,7 +76,7 @@ WMS / SHIPPING           ORDER
   | auto sinh Shipment{PENDING}; gán carrier+tracking 
   |-- shipment.shipped --->| fulfillment → SHIPPED    
   |-- shipment.delivered ->| fulfillment → DELIVERED  
-  |                        | COD → paymentStatus = PAID
+  |                        | COD → append COD_COLLECT/SUCCESS → paymentStatus = PAID
   |                        | orderStatus → CLOSED     
   |  [giao thất bại hẳn]   |                          
   |-- shipment.returned -->| fulfillment → RETURNED   
@@ -98,7 +98,7 @@ KHÁCH                     ORDER                     WMS
   |                    Nếu hợp lệ:                     |
   |                          |-- order.cancelled ----->| release reserve
   |                    orderStatus → CANCELLED         |
-  |                    ONLINE đã PAID → REFUND_PENDING → REFUNDED
+  |                    ONLINE đã PAID → append REFUND/PENDING → (callback) REFUND/SUCCESS → REFUNDED
   |<-- Đã hủy / hoàn tiền ---|                        |
 ```
 > Đã `ISSUED` → từ chối hủy, hướng dẫn dùng RMA (WF-E05).
