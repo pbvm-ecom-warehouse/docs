@@ -20,36 +20,168 @@
 // ============================================================
 
 // ========================= ENUMS =========================
-Enum warehouse_type { CENTRAL; SUB }
-Enum item_type { MATERIAL; CUP_BLANK; CUP_PRINTED; PACKAGING }
-Enum lot_status { ACTIVE; EXPIRED }
-Enum movement_type { RECEIVE; PUTAWAY; ISSUE; TRANSFER_OUT; TRANSFER_IN; ADJUST; SCRAP; PRINT_CONSUME; PRINT_OUTPUT }
-Enum po_status { DRAFT; CONFIRMED; SENT; PARTIALLY_RECEIVED; COMPLETED; CANCELLED }
-Enum grn_status { DRAFT; CONFIRMED; APPROVED }
-Enum putaway_status { PENDING; COMPLETED }
-Enum printjob_status { PENDING; IN_PROGRESS; COMPLETED; CANCELLED }
-Enum goodsissue_status { DRAFT; CONFIRMED }
-Enum stockcount_status { DRAFT; IN_PROGRESS; COMPLETED; APPROVED }
-Enum stocktransfer_status { DRAFT; CONFIRMED; IN_TRANSIT; COMPLETED; CANCELLED }
-Enum scrapnote_status { DRAFT; APPROVED; REJECTED }
-Enum goodsreturn_status { DRAFT; INSPECTED; RESTOCKED; CANCELLED }
-Enum return_condition { GOOD; DAMAGED }
-Enum supplier_status { ACTIVE; INACTIVE; BLACKLIST }
-Enum carrier_status { ACTIVE; INACTIVE }
-Enum shipment_status { PENDING; PICKED_UP; IN_TRANSIT; DELIVERED; FAILED; RETURNING; RETURNED }
-Enum user_status { ACTIVE; LOCKED }
+// DBML: mỗi giá trị enum nằm trên 1 dòng riêng — KHÔNG dùng dấu `;`
+Enum warehouse_type {
+  CENTRAL
+  SUB
+}
+Enum item_type {
+  MATERIAL
+  CUP_BLANK
+  CUP_PRINTED
+  PACKAGING
+}
+Enum lot_status {
+  ACTIVE
+  EXPIRED
+}
+Enum movement_type {
+  RECEIVE
+  PUTAWAY
+  ISSUE
+  TRANSFER_OUT
+  TRANSFER_IN
+  ADJUST
+  SCRAP
+  PRINT_CONSUME
+  PRINT_OUTPUT
+}
+Enum po_status {
+  DRAFT
+  CONFIRMED
+  SENT
+  PARTIALLY_RECEIVED
+  COMPLETED
+  CANCELLED
+}
+Enum grn_status {
+  DRAFT
+  CONFIRMED
+  APPROVED
+}
+Enum putaway_status {
+  PENDING
+  COMPLETED
+}
+Enum printjob_status {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+Enum goodsissue_status {
+  DRAFT
+  CONFIRMED
+}
+Enum stockcount_status {
+  DRAFT
+  IN_PROGRESS
+  COMPLETED
+  APPROVED
+}
+Enum stocktransfer_status {
+  DRAFT
+  CONFIRMED
+  IN_TRANSIT
+  COMPLETED
+  CANCELLED
+}
+Enum scrapnote_status {
+  DRAFT
+  APPROVED
+  REJECTED
+}
+Enum goodsreturn_status {
+  DRAFT
+  INSPECTED
+  RESTOCKED
+  CANCELLED
+}
+Enum return_condition {
+  GOOD
+  DAMAGED
+}
+Enum supplier_status {
+  ACTIVE
+  INACTIVE
+  BLACKLIST
+}
+Enum carrier_status {
+  ACTIVE
+  INACTIVE
+}
+Enum shipment_status {
+  PENDING
+  PICKED_UP
+  IN_TRANSIT
+  DELIVERED
+  FAILED
+  RETURNING
+  RETURNED
+}
+Enum user_status {
+  ACTIVE
+  LOCKED
+}
 
-Enum product_status { DRAFT; ACTIVE; HIDDEN }
-Enum fulfillment_type { STANDARD; PRINTED_TEMPLATE; CUSTOM_PRINT }
-Enum cart_status { ACTIVE; CONVERTED; ABANDONED }
-Enum payment_method { COD; ONLINE }
-Enum payment_status { UNPAID; PAID; REFUND_PENDING; REFUNDED }
-Enum order_status { PLACED; CONFIRMED; CANCELLED; CLOSED }
-Enum fulfillment_status { NONE; AWAITING_PRINT; READY_TO_PICK; ISSUED; SHIPPED; DELIVERED; RETURNED }
-Enum txn_type { CHARGE; REFUND; COD_COLLECT }
-Enum txn_status { SUCCESS; FAILED; PENDING }
-Enum customer_status { ACTIVE; LOCKED }
-Enum authtoken_type { VERIFY_EMAIL; RESET_PASSWORD }
+Enum product_status {
+  DRAFT
+  ACTIVE
+  HIDDEN
+}
+Enum fulfillment_type {
+  STANDARD
+  PRINTED_TEMPLATE
+  CUSTOM_PRINT
+}
+Enum cart_status {
+  ACTIVE
+  CONVERTED
+  ABANDONED
+}
+Enum payment_method {
+  COD
+  ONLINE
+}
+Enum payment_status {
+  UNPAID
+  PAID
+  REFUND_PENDING
+  REFUNDED
+}
+Enum order_status {
+  PLACED
+  CONFIRMED
+  CANCELLED
+  CLOSED
+}
+Enum fulfillment_status {
+  NONE
+  AWAITING_PRINT
+  READY_TO_PICK
+  ISSUED
+  SHIPPED
+  DELIVERED
+  RETURNED
+}
+Enum txn_type {
+  CHARGE
+  REFUND
+  COD_COLLECT
+}
+Enum txn_status {
+  SUCCESS
+  FAILED
+  PENDING
+}
+Enum customer_status {
+  ACTIVE
+  LOCKED
+}
+Enum authtoken_type {
+  VERIFY_EMAIL
+  RESET_PASSWORD
+}
 
 // ========================================================
 // ===============   WMS  (wms_db)   ======================
