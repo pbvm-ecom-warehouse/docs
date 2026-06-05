@@ -4,6 +4,8 @@
 
 > **Ownership:** Ecommerce sở hữu `categories`/`products`/`product_variants`/`designs`. Liên kết WMS **chỉ qua `sku`**; `availableQty` là bản copy sync từ `stock.changed` — không đọc chéo collection. Xem [data-ownership](../overview/data-ownership.md).
 
+> **Audit (chung):** các collection mang field audit theo [Quy ước Audit](../overview/data-ownership.md#quy-ước-audit-chung-mọi-collection) (master: `createdBy`/`updatedBy`/`createdAt`/`updatedAt`/`deletedAt`) — bảng dưới chỉ liệt kê field nghiệp vụ. `createdBy` của catalog do **admin** (`type = user`, cross-app) tạo; `designs` do khách sở hữu (`customerId` = người tạo).
+
 ## Nhóm 1: Danh mục
 
 ### Category (cây danh mục)

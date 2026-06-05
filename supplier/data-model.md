@@ -3,6 +3,8 @@
 > Trạng thái: 🔄 Đang phân tích
 > **Ownership:** `suppliers` và `supplier_items` thuộc `wms_db`, do module **supplier** (app WMS) sở hữu. Không bán trên Ecommerce → không sync sang ecom. Xem [data-ownership](../overview/data-ownership.md).
 
+> **Audit (chung):** `suppliers`/`supplier_items` là master → mang `createdBy`/`updatedBy`/`createdAt`/`updatedAt`/`deletedAt` theo [Quy ước Audit](../overview/data-ownership.md#quy-ước-audit-chung-mọi-collection). Bảng dưới chỉ liệt kê field nghiệp vụ.
+
 ## Supplier (Nhà cung cấp)
 
 > Đích của `PurchaseOrder.supplierId` (xem [warehouse/data-model](../warehouse/data-model.md#purchaseorder-đơn-đặt-hàng-ncc--uc-01)). Trước đây nằm trong WMS Nhóm 5 — nay tách về module supplier.

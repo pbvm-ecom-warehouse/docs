@@ -1,0 +1,724 @@
+// ============================================================
+// WMS-ECOM — DBML toàn hệ thống
+// Dán vào https://dbdiagram.io để xem ERD trực quan.
+// Sinh từ các data-model.md (7 module). Nguồn định danh: overview/data-ownership.md
+//
+// 2 logical DB (1 MongoDB cluster):
+//   - wms_db   : warehouse / supplier / shipping / auth-wms
+//   - ecom_db  : catalog / order / auth-ecom
+// Liên kết XUYÊN 2 app DUY NHẤT qua `sku` + id tham chiếu (orderId/printJobId/
+// fulfillWarehouseId) — không đọc chéo collection; giao tiếp qua event (BullMQ+Redis).
+// (Các Ref xuyên app ở cuối file được đánh dấu "CROSS-APP".)
+//
+// ----- QUY ƯỚC AUDIT -----
+//  - Master/catalog/config : createdBy, updatedBy, createdAt, updatedAt, deletedAt (soft-delete)
+//  - Chứng từ giao dịch     : createdAt, updatedAt, createdBy (+ người duyệt) — hủy bằng status, KHÔNG soft-delete
+//  - Sổ cái append-only     : chỉ createdAt + createdBy (stock_movements, payment_transactions) — BẤT BIẾN
+//  - Bảng *_items           : audit kế thừa từ chứng từ cha — không lặp lại
+//  - Trường actor (createdBy/updatedBy/approvedBy...) để ObjectId + note "→ users" (KHÔNG vẽ ref,
+//    tránh ~30 đường đổ dồn vào bảng users). Muốn vẽ thì thêm Ref ở mục cuối file.
+// ============================================================
+
+// ========================= ENUMS =========================
+Enum warehouse_type { CENTRAL; SUB }
+Enum item_type { MATERIAL; CUP_BLANK; CUP_PRINTED; PACKAGING }
+Enum lot_status { ACTIVE; EXPIRED }
+Enum movement_type { RECEIVE; PUTAWAY; ISSUE; TRANSFER_OUT; TRANSFER_IN; ADJUST; SCRAP; PRINT_CONSUME; PRINT_OUTPUT }
+Enum po_status { DRAFT; CONFIRMED; SENT; PARTIALLY_RECEIVED; COMPLETED; CANCELLED }
+Enum grn_status { DRAFT; CONFIRMED; APPROVED }
+Enum putaway_status { PENDING; COMPLETED }
+Enum printjob_status { PENDING; IN_PROGRESS; COMPLETED; CANCELLED }
+Enum goodsissue_status { DRAFT; CONFIRMED }
+Enum stockcount_status { DRAFT; IN_PROGRESS; COMPLETED; APPROVED }
+Enum stocktransfer_status { DRAFT; CONFIRMED; IN_TRANSIT; COMPLETED; CANCELLED }
+Enum scrapnote_status { DRAFT; APPROVED; REJECTED }
+Enum goodsreturn_status { DRAFT; INSPECTED; RESTOCKED; CANCELLED }
+Enum return_condition { GOOD; DAMAGED }
+Enum supplier_status { ACTIVE; INACTIVE; BLACKLIST }
+Enum carrier_status { ACTIVE; INACTIVE }
+Enum shipment_status { PENDING; PICKED_UP; IN_TRANSIT; DELIVERED; FAILED; RETURNING; RETURNED }
+Enum user_status { ACTIVE; LOCKED }
+
+Enum product_status { DRAFT; ACTIVE; HIDDEN }
+Enum fulfillment_type { STANDARD; PRINTED_TEMPLATE; CUSTOM_PRINT }
+Enum cart_status { ACTIVE; CONVERTED; ABANDONED }
+Enum payment_method { COD; ONLINE }
+Enum payment_status { UNPAID; PAID; REFUND_PENDING; REFUNDED }
+Enum order_status { PLACED; CONFIRMED; CANCELLED; CLOSED }
+Enum fulfillment_status { NONE; AWAITING_PRINT; READY_TO_PICK; ISSUED; SHIPPED; DELIVERED; RETURNED }
+Enum txn_type { CHARGE; REFUND; COD_COLLECT }
+Enum txn_status { SUCCESS; FAILED; PENDING }
+Enum customer_status { ACTIVE; LOCKED }
+Enum authtoken_type { VERIFY_EMAIL; RESET_PASSWORD }
+
+// ========================================================
+// ===============   WMS  (wms_db)   ======================
+// ========================================================
+
+// ---------- Cấu trúc kho (master) ----------
+Table warehouses {
+  id ObjectId [pk]
+  name String
+  type warehouse_type
+  address String
+  isActive Boolean
+  createdBy ObjectId [note: '→ users.id']
+  updatedBy ObjectId [note: '→ users.id']
+  createdAt DateTime
+  updatedAt DateTime
+  deletedAt DateTime [note: 'soft delete']
+}
+
+Table zones {
+  id ObjectId [pk]
+  warehouseId ObjectId [ref: > warehouses.id]
+  name String
+  code String
+  createdBy ObjectId [note: '→ users.id']
+  updatedBy ObjectId [note: '→ users.id']
+  createdAt DateTime
+  updatedAt DateTime
+  deletedAt DateTime [note: 'soft delete']
+}
+
+Table racks {
+  id ObjectId [pk]
+  zoneId ObjectId [ref: > zones.id]
+  name String
+  code String
+  createdBy ObjectId [note: '→ users.id']
+  updatedBy ObjectId [note: '→ users.id']
+  createdAt DateTime
+  updatedAt DateTime
+  deletedAt DateTime [note: 'soft delete']
+}
+
+Table shelves {
+  id ObjectId [pk]
+  rackId ObjectId [ref: > racks.id]
+  level Number
+  code String [note: 'barcode vị trí']
+  isStaging Boolean
+  createdBy ObjectId [note: '→ users.id']
+  updatedBy ObjectId [note: '→ users.id']
+  createdAt DateTime
+  updatedAt DateTime
+  deletedAt DateTime [note: 'soft delete']
+}
+
+// ---------- Hàng hóa & tồn ----------
+Table warehouse_items {
+  id ObjectId [pk]
+  sku String [unique, not null, note: 'khóa liên kết Ecommerce']
+  barcode String
+  altBarcodes Array [note: 'mã NCC/EAN/UPC map về cùng item']
+  name String
+  type item_type
+  unit String [note: 'đơn vị cơ sở']
+  altUnits Array [note: '[{unit, factor}]']
+  attributes Array [note: '[{name, value, code}]']
+  isPerishable Boolean
+  nearExpiryDays Number
+  isActive Boolean
+  createdBy ObjectId [note: '→ users.id']
+  updatedBy ObjectId [note: '→ users.id']
+  createdAt DateTime
+  updatedAt DateTime
+  deletedAt DateTime [note: 'soft delete']
+}
+
+Table stock_balances {
+  id ObjectId [pk]
+  itemId ObjectId [ref: > warehouse_items.id]
+  warehouseId ObjectId [ref: > warehouses.id]
+  onHand Number
+  reserved Number
+  expired Number
+  minQuantity Number
+  updatedAt DateTime
+  Note: 'Lớp 1 — tồn tổng. available = onHand - reserved - expired (số đẩy sang Ecom). Bút toán gốc ở stock_movements'
+}
+
+Table inventory_stocks {
+  id ObjectId [pk]
+  itemId ObjectId [ref: > warehouse_items.id]
+  warehouseId ObjectId [ref: > warehouses.id]
+  shelfId ObjectId [ref: > shelves.id]
+  lotId ObjectId [ref: > lots.id]
+  quantity Number
+  updatedAt DateTime
+  Note: 'Lớp 2 — tồn theo vị trí. Bút toán gốc ở stock_movements'
+}
+
+Table lots {
+  id ObjectId [pk]
+  itemId ObjectId [ref: > warehouse_items.id]
+  lotNumber String
+  expiryDate Date
+  receivedDate Date
+  status lot_status
+  createdAt DateTime
+  updatedAt DateTime
+}
+
+Table stock_movements {
+  id ObjectId [pk]
+  itemId ObjectId [ref: > warehouse_items.id]
+  warehouseId ObjectId [ref: > warehouses.id]
+  shelfId ObjectId [ref: > shelves.id]
+  lotId ObjectId [ref: > lots.id]
+  type movement_type
+  quantity Number [note: 'có dấu (+ nhập / - xuất)']
+  refType String
+  refId ObjectId
+  createdBy ObjectId [note: '→ users.id']
+  createdAt DateTime
+  Note: 'SỔ CÁI append-only — nguồn sự thật đối soát 2 lớp tồn. BẤT BIẾN: không updatedAt/deletedAt'
+}
+
+// ---------- Mua hàng / nhập (chứng từ) ----------
+Table purchase_orders {
+  id ObjectId [pk]
+  supplierId ObjectId [ref: > suppliers.id]
+  warehouseId ObjectId [ref: > warehouses.id]
+  orderDate DateTime
+  expectedDate DateTime
+  status po_status
+  note String
+  createdBy ObjectId [note: '→ users.id']
+  createdAt DateTime
+  updatedAt DateTime
+}
+
+Table purchase_order_items {
+  id ObjectId [pk]
+  purchaseOrderId ObjectId [ref: > purchase_orders.id]
+  itemId ObjectId [ref: > warehouse_items.id]
+  expectedQty Number
+  unit String
+  unitPrice Number
+}
+
+Table goods_receive_notes {
+  id ObjectId [pk]
+  purchaseOrderId ObjectId [ref: > purchase_orders.id]
+  warehouseId ObjectId [ref: > warehouses.id]
+  receiveDate DateTime
+  status grn_status
+  note String
+  createdBy ObjectId [note: '→ users.id (RECEIVER)']
+  approvedBy ObjectId [note: '→ users.id (MANAGER)']
+  createdAt DateTime
+  updatedAt DateTime
+}
+
+Table goods_receive_items {
+  id ObjectId [pk]
+  grnId ObjectId [ref: > goods_receive_notes.id]
+  itemId ObjectId [ref: > warehouse_items.id]
+  expectedQty Number
+  actualQty Number
+  unit String
+  lotNumber String
+  expiryDate Date
+  note String
+}
+
+Table putaway_tasks {
+  id ObjectId [pk]
+  grnId ObjectId [ref: > goods_receive_notes.id]
+  warehouseId ObjectId [ref: > warehouses.id]
+  status putaway_status
+  createdBy ObjectId [note: '→ users.id (RECEIVER)']
+  createdAt DateTime
+  updatedAt DateTime
+}
+
+Table putaway_items {
+  id ObjectId [pk]
+  putAwayTaskId ObjectId [ref: > putaway_tasks.id]
+  itemId ObjectId [ref: > warehouse_items.id]
+  lotId ObjectId [ref: > lots.id]
+  quantity Number
+  shelfId ObjectId [ref: > shelves.id]
+}
+
+// ---------- In ly (make-to-order) ----------
+Table print_jobs {
+  id ObjectId [pk]
+  orderId ObjectId [note: 'CROSS-APP ref → ecom orders.id']
+  warehouseId ObjectId [ref: > warehouses.id]
+  designFile String
+  status printjob_status
+  note String
+  createdBy ObjectId [note: '→ users.id (MANAGER)']
+  confirmedBy ObjectId [note: '→ users.id (PRINTER)']
+  createdAt DateTime
+  updatedAt DateTime
+}
+
+Table print_job_items {
+  id ObjectId [pk]
+  printJobId ObjectId [ref: > print_jobs.id]
+  inputItemId ObjectId [ref: > warehouse_items.id, note: 'CUP_BLANK']
+  outputItemId ObjectId [ref: > warehouse_items.id, note: 'CUP_PRINTED (per-design)']
+  quantity Number
+}
+
+// ---------- Xuất / kiểm / chuyển / hủy / hoàn ----------
+Table goods_issues {
+  id ObjectId [pk]
+  orderId ObjectId [note: 'CROSS-APP ref → ecom orders.id']
+  warehouseId ObjectId [ref: > warehouses.id]
+  issueDate DateTime
+  status goodsissue_status
+  note String
+  createdBy ObjectId [note: '→ users.id (PICKER)']
+  createdAt DateTime
+  updatedAt DateTime
+}
+
+Table goods_issue_items {
+  id ObjectId [pk]
+  goodsIssueId ObjectId [ref: > goods_issues.id]
+  itemId ObjectId [ref: > warehouse_items.id]
+  lotId ObjectId [ref: > lots.id]
+  quantity Number
+  shelfId ObjectId [ref: > shelves.id]
+  unit String
+}
+
+Table stock_counts {
+  id ObjectId [pk]
+  warehouseId ObjectId [ref: > warehouses.id]
+  zoneId ObjectId [ref: > zones.id]
+  countDate DateTime
+  status stockcount_status
+  note String
+  createdBy ObjectId [note: '→ users.id (MANAGER)']
+  countedBy ObjectId [note: '→ users.id (COUNTER)']
+  approvedBy ObjectId [note: '→ users.id (MANAGER)']
+  createdAt DateTime
+  updatedAt DateTime
+}
+
+Table stock_count_items {
+  id ObjectId [pk]
+  stockCountId ObjectId [ref: > stock_counts.id]
+  itemId ObjectId [ref: > warehouse_items.id]
+  shelfId ObjectId [ref: > shelves.id]
+  lotId ObjectId [ref: > lots.id]
+  systemQty Number
+  actualQty Number
+  delta Number
+  reason String
+}
+
+Table stock_transfers {
+  id ObjectId [pk]
+  fromWarehouseId ObjectId [ref: > warehouses.id]
+  toWarehouseId ObjectId [ref: > warehouses.id]
+  transferDate DateTime
+  status stocktransfer_status
+  note String
+  createdBy ObjectId [note: '→ users.id (MANAGER)']
+  approvedBy ObjectId [note: '→ users.id (MANAGER)']
+  createdAt DateTime
+  updatedAt DateTime
+}
+
+Table stock_transfer_items {
+  id ObjectId [pk]
+  stockTransferId ObjectId [ref: > stock_transfers.id]
+  itemId ObjectId [ref: > warehouse_items.id]
+  lotId ObjectId [ref: > lots.id]
+  quantity Number
+  fromShelfId ObjectId [ref: > shelves.id]
+  toShelfId ObjectId [ref: > shelves.id]
+}
+
+Table scrap_notes {
+  id ObjectId [pk]
+  warehouseId ObjectId [ref: > warehouses.id]
+  status scrapnote_status
+  note String
+  createdBy ObjectId [note: '→ users.id (COUNTER/RECEIVER)']
+  approvedBy ObjectId [note: '→ users.id (MANAGER)']
+  createdAt DateTime
+  updatedAt DateTime
+}
+
+Table scrap_note_items {
+  id ObjectId [pk]
+  scrapNoteId ObjectId [ref: > scrap_notes.id]
+  itemId ObjectId [ref: > warehouse_items.id]
+  lotId ObjectId [ref: > lots.id]
+  shelfId ObjectId [ref: > shelves.id]
+  quantity Number
+  reason String
+}
+
+Table goods_returns {
+  id ObjectId [pk]
+  orderId ObjectId [note: 'CROSS-APP ref → ecom orders.id']
+  warehouseId ObjectId [ref: > warehouses.id]
+  status goodsreturn_status
+  note String
+  createdBy ObjectId [note: '→ users.id (RECEIVER)']
+  createdAt DateTime
+  updatedAt DateTime
+}
+
+Table goods_return_items {
+  id ObjectId [pk]
+  goodsReturnId ObjectId [ref: > goods_returns.id]
+  itemId ObjectId [ref: > warehouse_items.id]
+  quantity Number
+  condition return_condition
+  shelfId ObjectId [ref: > shelves.id]
+  lotId ObjectId [ref: > lots.id]
+}
+
+// ---------- Supplier (master) ----------
+Table suppliers {
+  id ObjectId [pk]
+  code String [unique]
+  name String
+  contactName String
+  phone String
+  email String
+  address String
+  taxCode String
+  status supplier_status
+  note String
+  createdBy ObjectId [note: '→ users.id']
+  updatedBy ObjectId [note: '→ users.id']
+  createdAt DateTime
+  updatedAt DateTime
+  deletedAt DateTime [note: 'soft delete']
+}
+
+Table supplier_items {
+  id ObjectId [pk]
+  itemId ObjectId [unique, ref: - warehouse_items.id, note: '1 SKU ↔ 1 NCC chính']
+  supplierId ObjectId [ref: > suppliers.id]
+  supplierItemCode String
+  purchasePrice Number
+  leadTimeDays Number
+  minOrderQty Number
+  isActive Boolean
+  createdBy ObjectId [note: '→ users.id']
+  updatedBy ObjectId [note: '→ users.id']
+  createdAt DateTime
+  updatedAt DateTime
+  deletedAt DateTime [note: 'soft delete']
+}
+
+// ---------- Shipping ----------
+Table carriers {
+  id ObjectId [pk]
+  name String
+  code String [unique]
+  status carrier_status
+  contactInfo Object
+  note String
+  apiConfig Object [note: 'optional — chừa cho tích hợp API hãng']
+  createdBy ObjectId [note: '→ users.id']
+  updatedBy ObjectId [note: '→ users.id']
+  createdAt DateTime
+  updatedAt DateTime
+  deletedAt DateTime [note: 'soft delete']
+}
+
+Table shipments {
+  id ObjectId [pk]
+  orderId ObjectId [note: 'CROSS-APP ref → ecom orders.id']
+  goodsIssueId ObjectId [ref: - goods_issues.id, note: '1 đơn = 1 vận đơn']
+  fulfillWarehouseId ObjectId [ref: > warehouses.id]
+  carrierId ObjectId [ref: > carriers.id]
+  trackingNumber String
+  shipmentStatus shipment_status
+  recipient Object [note: 'snapshot {name,phone,address}']
+  paymentMethod payment_method
+  codAmount Number
+  attempts Number
+  failReason String
+  statusHistory Array [note: 'append log {status,at,by,note}']
+  shippedAt Date
+  deliveredAt Date
+  createdBy ObjectId [note: '→ users.id']
+  createdAt DateTime
+  updatedAt DateTime
+}
+
+// ---------- Auth-WMS (master) ----------
+Table users {
+  id ObjectId [pk]
+  username String [unique]
+  email String
+  passwordHash String
+  name String
+  roles Array [note: 'ADMIN/MANAGER/RECEIVER/PICKER/PRINTER/COUNTER']
+  status user_status
+  warehouseId ObjectId [ref: > warehouses.id, note: 'kho mặc định']
+  mustChangePassword Boolean
+  createdBy ObjectId [note: '→ users.id (ADMIN tạo)']
+  updatedBy ObjectId [note: '→ users.id']
+  createdAt DateTime
+  updatedAt DateTime
+  deletedAt DateTime [note: 'soft delete (hoặc status=LOCKED)']
+}
+
+Table user_refresh_tokens {
+  id ObjectId [pk]
+  userId ObjectId [ref: > users.id]
+  tokenHash String
+  expiresAt DateTime
+  createdAt DateTime
+  revokedAt DateTime [note: 'lifecycle: logout/xoay/reset/khóa']
+}
+
+// ========================================================
+// ===============  ECOMMERCE  (ecom_db)  =================
+// ========================================================
+
+// ---------- Catalog (master) ----------
+Table categories {
+  id ObjectId [pk]
+  name String
+  slug String [unique]
+  parentId ObjectId [ref: > categories.id, note: 'null = gốc']
+  position Number
+  createdBy ObjectId [note: '→ admin user (cross-app)']
+  updatedBy ObjectId [note: '→ admin user (cross-app)']
+  createdAt DateTime
+  updatedAt DateTime
+  deletedAt DateTime [note: 'soft delete']
+}
+
+Table products {
+  id ObjectId [pk]
+  name String
+  slug String [unique]
+  description String
+  images Array
+  categoryId ObjectId [ref: > categories.id]
+  status product_status
+  seo Object
+  createdBy ObjectId [note: '→ admin user (cross-app)']
+  updatedBy ObjectId [note: '→ admin user (cross-app)']
+  createdAt DateTime
+  updatedAt DateTime
+  deletedAt DateTime [note: 'soft delete']
+}
+
+Table product_variants {
+  id ObjectId [pk]
+  productId ObjectId [ref: > products.id]
+  sku String [note: 'khớp WMS — khóa sync tồn']
+  attributes Object
+  price Number
+  availableQty Number [note: 'bản copy WMS sync (Σ available mọi kho)']
+  fulfillmentType fulfillment_type
+  isActive Boolean
+  createdBy ObjectId [note: '→ admin user (cross-app)']
+  updatedBy ObjectId [note: '→ admin user (cross-app)']
+  createdAt DateTime
+  updatedAt DateTime
+  deletedAt DateTime [note: 'soft delete']
+}
+
+Table designs {
+  id ObjectId [pk]
+  customerId ObjectId [ref: > customers.id, note: 'owner = createdBy']
+  name String
+  file String
+  thumbnail String
+  createdAt DateTime
+  updatedAt DateTime
+  lastUsedAt DateTime
+  deletedAt DateTime [note: 'soft delete']
+}
+
+// ---------- Order ----------
+Table carts {
+  id ObjectId [pk]
+  customerId ObjectId [ref: > customers.id]
+  status cart_status
+  createdAt DateTime
+  updatedAt DateTime
+}
+
+Table cart_items {
+  id ObjectId [pk]
+  cartId ObjectId [ref: > carts.id]
+  sku String
+  quantity Number
+  isPrintItem Boolean
+  designFile String
+  designId ObjectId [ref: > designs.id]
+}
+
+Table orders {
+  id ObjectId [pk]
+  code String [unique]
+  customerId ObjectId [ref: > customers.id, note: 'người đặt = createdBy']
+  shippingAddress Object [note: 'snapshot lúc đặt']
+  subtotal Number
+  shippingFee Number
+  total Number
+  paymentMethod payment_method
+  paymentStatus payment_status
+  orderStatus order_status
+  fulfillmentStatus fulfillment_status
+  fulfillWarehouseId ObjectId [note: 'CROSS-APP ref → wms warehouses.id (1 kho/đơn)']
+  hasPrintItems Boolean
+  paymentDeadline DateTime
+  cancelReason String
+  updatedBy ObjectId [note: '→ admin user / system (cross-app)']
+  placedAt DateTime [note: '= createdAt']
+  updatedAt DateTime
+  Note: 'Hủy bằng orderStatus=CANCELLED (không soft-delete). 3 trục trạng thái độc lập'
+}
+
+Table order_items {
+  id ObjectId [pk]
+  orderId ObjectId [ref: > orders.id]
+  sku String
+  name String [note: 'snapshot']
+  unitPrice Number [note: 'snapshot']
+  quantity Number
+  isPrintItem Boolean
+  designFile String
+  designId ObjectId [ref: > designs.id]
+  printJobId ObjectId [note: 'CROSS-APP ref → wms print_jobs.id']
+}
+
+Table payment_transactions {
+  id ObjectId [pk]
+  orderId ObjectId [ref: > orders.id]
+  type txn_type
+  status txn_status
+  method payment_method
+  amount Number [note: 'luôn dương; hướng tiền suy từ type']
+  providerTxnId String [unique, note: 'idempotency callback cổng']
+  idempotencyKey String
+  gatewayPayload Object
+  createdBy ObjectId [note: 'system/cổng/admin']
+  createdAt DateTime
+  Note: 'SỔ CÁI tiền append-only. Order.paymentStatus là cache dẫn xuất. BẤT BIẾN: không updatedAt/deletedAt'
+}
+
+// ---------- Auth-Ecom ----------
+Table customers {
+  id ObjectId [pk]
+  email String [unique]
+  passwordHash String
+  name String
+  phone String
+  emailVerified Boolean
+  status customer_status
+  addresses Array [note: 'Address[] embedded — đúng 1 isDefault=true']
+  createdAt DateTime
+  updatedAt DateTime
+  deletedAt DateTime [note: 'soft delete (hoặc status=LOCKED)']
+}
+
+Table customer_refresh_tokens {
+  id ObjectId [pk]
+  customerId ObjectId [ref: > customers.id]
+  tokenHash String
+  expiresAt DateTime
+  createdAt DateTime
+  revokedAt DateTime [note: 'lifecycle: logout/xoay/reset/khóa']
+}
+
+Table customer_auth_tokens {
+  id ObjectId [pk]
+  customerId ObjectId [ref: > customers.id]
+  type authtoken_type
+  tokenHash String
+  expiresAt DateTime
+  usedAt DateTime [note: 'một-lần']
+  createdAt DateTime
+}
+
+// ========================================================
+// =====  LIÊN KẾT XUYÊN 2 APP (CROSS-APP, qua event)  ====
+// =====  Không đọc chéo collection — chỉ logic ref     ====
+// ========================================================
+// Bỏ comment nếu muốn dbdiagram vẽ luôn các đường này:
+// Ref: product_variants.sku > warehouse_items.sku   // đồng bộ tồn (link DUY NHẤT)
+// Ref: print_jobs.orderId > orders.id
+// Ref: goods_issues.orderId > orders.id
+// Ref: goods_returns.orderId > orders.id
+// Ref: shipments.orderId > orders.id
+// Ref: orders.fulfillWarehouseId > warehouses.id
+// Ref: order_items.printJobId > print_jobs.id
+
+// ========================= GROUPS =========================
+TableGroup "WMS · warehouse" {
+  warehouses
+  zones
+  racks
+  shelves
+  warehouse_items
+  stock_balances
+  inventory_stocks
+  lots
+  stock_movements
+  purchase_orders
+  purchase_order_items
+  goods_receive_notes
+  goods_receive_items
+  putaway_tasks
+  putaway_items
+  print_jobs
+  print_job_items
+  goods_issues
+  goods_issue_items
+  stock_counts
+  stock_count_items
+  stock_transfers
+  stock_transfer_items
+  scrap_notes
+  scrap_note_items
+  goods_returns
+  goods_return_items
+}
+
+TableGroup "WMS · supplier" {
+  suppliers
+  supplier_items
+}
+
+TableGroup "WMS · shipping" {
+  carriers
+  shipments
+}
+
+TableGroup "WMS · auth-wms" {
+  users
+  user_refresh_tokens
+}
+
+TableGroup "ECOM · catalog" {
+  categories
+  products
+  product_variants
+  designs
+}
+
+TableGroup "ECOM · order" {
+  carts
+  cart_items
+  orders
+  order_items
+  payment_transactions
+}
+
+TableGroup "ECOM · auth-ecom" {
+  customers
+  customer_refresh_tokens
+  customer_auth_tokens
+}

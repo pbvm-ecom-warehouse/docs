@@ -4,6 +4,8 @@
 
 Module Shipping thuộc app **WMS**, dữ liệu lưu ở `wms_db`. Liên kết với đơn Ecommerce **chỉ qua `orderId`** (id tham chiếu) và event bất đồng bộ — không bao giờ đọc chéo `ecom_db`. Xem [data-ownership](../overview/data-ownership.md).
 
+> **Audit (chung):** `carriers` (master) mang đủ `createdBy`/`updatedBy`/`createdAt`/`updatedAt`/`deletedAt`; `shipments` (chứng từ) mang `createdBy`/`createdAt`/`updatedAt` + `statusHistory[]`. Theo [Quy ước Audit](../overview/data-ownership.md#quy-ước-audit-chung-mọi-collection). Bảng dưới chỉ liệt kê field nghiệp vụ.
+
 ---
 
 ## carriers

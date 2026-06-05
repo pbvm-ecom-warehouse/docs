@@ -46,6 +46,23 @@ user_refresh_tokens
 
 ---
 
+## Quy ước Audit (chung mọi collection)
+
+> Áp cho **mọi module**. Các bảng trong từng `*/data-model.md` chỉ liệt kê **field nghiệp vụ**, **không lặp lại** khối audit dưới đây (trừ ngoại lệ nêu rõ). Phản ánh đầy đủ field trong [erd.dbml](erd.dbml).
+
+| Nhóm collection | Trường audit |
+|---|---|
+| **Master / catalog / config** — `warehouses` `zones` `racks` `shelves` `warehouse_items` `suppliers` `supplier_items` `carriers` `users` `categories` `products` `product_variants` `designs` `customers` | `createdBy`, `updatedBy`, `createdAt`, `updatedAt`, `deletedAt` (**soft-delete**) |
+| **Chứng từ giao dịch** — PO, GRN, PutAway, PrintJob, GoodsIssue, StockCount, StockTransfer, ScrapNote, GoodsReturn, `shipments`, `orders`, `carts` | `createdAt`, `updatedAt` + người tạo/duyệt (`createdBy`/`approvedBy`/… nêu trong bảng). **Hủy bằng `status`, KHÔNG soft-delete** |
+| **Sổ cái append-only** — `stock_movements`, `payment_transactions` | **chỉ** `createdAt` + `createdBy` — **BẤT BIẾN**, không `updatedAt`/`deletedAt` |
+| **Bảng dòng `*Item`** — PurchaseOrderItem, GoodsIssueItem, OrderItem… | **không** mang audit — kế thừa từ chứng từ cha |
+| **Snapshot tồn** — `stock_balances`, `inventory_stocks` | `updatedAt` |
+| **Token** — `user_refresh_tokens`, `customer_refresh_tokens`, `customer_auth_tokens` | `createdAt` + `revokedAt`/`usedAt` (đủ vòng đời, không soft-delete) |
+
+> **Actor fields** (`createdBy`/`updatedBy`/`approvedBy`/…) là `ObjectId` trỏ `users` (nhân viên `type = user`). Catalog Ecommerce (`categories`/`products`/`product_variants`) do **admin** (`type = user`, cross-app) tạo. `designs`/`orders` do khách sở hữu — `customerId` chính là người tạo.
+
+---
+
 ## Sản phẩm được tạo thế nào?
 
 Không phải mọi item trong WMS đều bán trên Ecommerce (ví dụ: nguyên liệu thô không bán cho khách). Vì vậy mỗi app tự quản lý entity sản phẩm của mình.

@@ -2,6 +2,8 @@
 
 > Trạng thái: 🔄 Đang phân tích — có thể còn điều chỉnh
 
+> **Audit (chung):** mọi collection mang field audit theo [Quy ước Audit](../overview/data-ownership.md#quy-ước-audit-chung-mọi-collection) — bảng dưới chỉ liệt kê **field nghiệp vụ**, không lặp lại. Ngoại lệ: `stock_movements` là **sổ cái append-only bất biến** (chỉ `createdAt`+`createdBy`); `stock_balances`/`inventory_stocks` chỉ thêm `updatedAt`; các bảng `*Item` kế thừa audit từ chứng từ cha.
+
 ## Nhóm 1: Cấu trúc kho & vị trí
 
 ```

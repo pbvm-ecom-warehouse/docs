@@ -4,6 +4,8 @@
 > **Ownership:** `users`, `user_refresh_tokens` thuộc `wms_db`, do module **auth-wms** (app WMS) sở hữu. `users` là danh bạ nhân viên duy nhất cho cả kho lẫn back-office shop. Xem [data-ownership](../overview/data-ownership.md).
 > Cơ chế token chung (access ngắn + refresh lưu DB, claim `type`): [system-context#auth](../overview/system-context.md#auth).
 
+> **Audit (chung):** `users` (master) mang `createdBy`/`updatedBy`/`createdAt`/`updatedAt`/`deletedAt`; `user_refresh_tokens` dùng `createdAt`+`revokedAt`. Theo [Quy ước Audit](../overview/data-ownership.md#quy-ước-audit-chung-mọi-collection).
+
 ## User (Tài khoản nhân viên)
 
 > Đích của mọi `@Roles(...)` guard trong WMS, và là chủ thể `type = user` được route admin Ecommerce tin cậy (validate qua shared secret, không đọc chéo `wms_db`).

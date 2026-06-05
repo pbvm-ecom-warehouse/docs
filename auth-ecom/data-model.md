@@ -4,6 +4,8 @@
 > **Ownership:** `customers`, `customer_refresh_tokens`, `customer_auth_tokens` thuộc `ecom_db`, do module **auth-ecom** (app Ecommerce) sở hữu. Xem [data-ownership](../overview/data-ownership.md).
 > Cơ chế token chung (access ngắn + refresh lưu DB, claim `type`): [system-context#auth](../overview/system-context.md#auth).
 
+> **Audit (chung):** `customers` (master) mang `createdAt`/`updatedAt`/`deletedAt`; các collection token dùng `createdAt`+`revokedAt`/`usedAt`. Theo [Quy ước Audit](../overview/data-ownership.md#quy-ước-audit-chung-mọi-collection).
+
 ## Customer (Tài khoản khách)
 
 > Đích của `customerId` mà [Order](../order/data-model.md) và [Catalog](../catalog/data-model.md) tham chiếu. Trước đây chưa định nghĩa (gap) — nay module auth-ecom sở hữu.

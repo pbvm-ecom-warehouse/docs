@@ -4,6 +4,8 @@
 
 > **Ownership:** Module Order sở hữu `carts`/`orders`/`payment_transactions`. `customerId` trỏ tài khoản khách (`customers`) do **module Auth-Ecom** sở hữu — Order **không định nghĩa schema Customer**, chỉ tham chiếu id. Liên kết WMS **chỉ qua `sku`** + `printJobId`/`fulfillWarehouseId` — không đọc chéo collection. Xem [data-ownership](../overview/data-ownership.md).
 
+> **Audit (chung):** xem [Quy ước Audit](../overview/data-ownership.md#quy-ước-audit-chung-mọi-collection). `orders`/`carts` là chứng từ (`createdAt`/`updatedAt`, hủy bằng `status`); `payment_transactions` là **sổ cái append-only bất biến** (chỉ `createdAt`+`createdBy`); bảng `*Item` kế thừa audit từ chứng từ cha. Bảng dưới chỉ liệt kê field nghiệp vụ.
+
 ## Nhóm 1: Giỏ hàng
 
 ### Cart (1 giỏ ACTIVE / khách)
