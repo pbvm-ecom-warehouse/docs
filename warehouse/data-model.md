@@ -46,7 +46,13 @@ Warehouse → Zone → Rack → Shelf
 | rackId | ObjectId | Thuộc rack nào |
 | level | Number | Số tầng (1, 2, 3...) |
 | code | String | Mã tầng — **giá trị barcode vị trí** (dán tem ở mỗi shelf, quét khi put-away/pick) |
+| innerDepth | Number | Chiều sâu **lòng** tầng (cm) — tùy chọn, cần để gợi ý put-away |
+| innerWidth | Number | Chiều rộng lòng tầng (cm) — tùy chọn |
+| innerHeight | Number | Chiều cao khoảng tầng (cm) — tùy chọn |
+| fillFactor | Number | Hệ số lấp đầy riêng shelf (0–1), override mặc định hệ thống — tùy chọn |
 | isStaging | Boolean | `true` = shelf "khu nhận hàng" (mỗi kho có 1), nơi hàng nằm tạm sau GRN trước khi put-away |
+
+> **Sức chứa (cho gợi ý put-away):** `usableVolume = innerDepth × innerWidth × innerHeight` (cm³, dẫn xuất — không lưu). Shelf `isStaging` không cần kích thước (không bao giờ là đích gợi ý). `fillFactor` mặc định ở mức cấu hình hệ thống (vd `0.75`); shelf chỉ khai khi muốn ghi đè. Kích thước **tùy chọn**: shelf chưa khai → bỏ khỏi danh sách gợi ý. Xem [workflow.md → WF-01 Gợi ý vị trí](workflow.md#wf-01-nhập-hàng-từ-nhà-cung-cấp-uc-01--uc-02--uc-03).
 
 ---
 
