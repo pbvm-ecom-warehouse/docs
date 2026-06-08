@@ -76,11 +76,12 @@
 ### Luồng chính
 
 1. Hệ thống sinh danh sách hàng cần sắp xếp từ GRN vừa xác nhận
-2. **Quét barcode SKU → quét barcode vị trí (shelf)** → nhập số lượng
-3. Hệ thống tự khớp dòng GRN *(sai item hoặc qty lệch → cảnh báo)*
-4. Nếu một mặt hàng để nhiều vị trí → tách số lượng theo từng vị trí (quét nhiều shelf)
-5. RECEIVER xác nhận put-away → hệ thống **chuyển hàng từ shelf staging → shelf thật** (chỉ đổi lớp vị trí; `onHand` không đổi nên không sync Ecommerce)
-6. Khi xuất kho (UC-05) → hệ thống hiển thị vị trí để PICKER lấy đúng chỗ
+2. **Gợi ý vị trí (advisory):** với item đã khai kích thước, hệ liệt kê các shelf phù hợp kèm **sức chứa còn lại** (`còn chứa được ~N đơn vị`) — ưu tiên shelf đã có cùng SKU (gom chỗ), rồi **best-fit** (lấp khít, chừa kệ rộng cho hàng to). Item/shelf chưa khai kích thước → bỏ qua gợi ý, làm thủ công. Chi tiết cách tính: [workflow.md → WF-01](workflow.md#wf-01-nhập-hàng-từ-nhà-cung-cấp-uc-01--uc-02--uc-03)
+3. **Quét barcode SKU → quét barcode vị trí (shelf)** → nhập số lượng *(RECEIVER được đặt khác gợi ý; gợi ý không cưỡng chế)*
+4. Hệ thống tự khớp dòng GRN *(sai item hoặc qty lệch → cảnh báo)*
+5. Nếu một mặt hàng để nhiều vị trí → tách số lượng theo từng vị trí (quét nhiều shelf)
+6. RECEIVER xác nhận put-away → hệ thống **chuyển hàng từ shelf staging → shelf thật** (chỉ đổi lớp vị trí; `onHand` không đổi nên không sync Ecommerce)
+7. Khi xuất kho (UC-05) → hệ thống hiển thị vị trí để PICKER lấy đúng chỗ
 
 ---
 
