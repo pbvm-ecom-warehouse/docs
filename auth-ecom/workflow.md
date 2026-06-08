@@ -17,7 +17,7 @@
 KHÁCH                AUTH-ECOM                 NOTIFICATION
   |-- đăng ký ----------->| tạo customers (emailVerified=false)
   |                       |-- customer.verify_requested ----->| gửi email link
-  |<-- access+refresh ----| (đăng nhập ngay, mua được luôn)   |
+  |<-- access+refresh ----| (đăng nhập ngay nhưng không mua được)   |
   |                                                            |
   |-- mở link (token) --->| VERIFY_EMAIL còn hạn & chưa dùng? |
   |                       |   YES → emailVerified=true, token.usedAt
