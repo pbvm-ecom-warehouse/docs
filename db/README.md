@@ -21,6 +21,7 @@
 | 10 | [Order (Ecommerce)](10-order.md) | carts, orders, payment_transactions (+items) |
 | 11 | [Auth-Ecom](11-auth-ecom.md) | customers, customer_refresh_tokens, customer_auth_tokens |
 | 12 | [Luồng end-to-end](12-luong-end-to-end.md) | (ráp 45 bảng vào 1 vòng đời đơn hàng) |
+| 13 | [Tổng quan hệ thống](13-tong-quan-he-thong.md) | Bản phân tích và tóm tắt toàn diện hệ thống |
 
 ## Bản đồ nhanh — 2 DB, 7 module, 45 bảng
 
