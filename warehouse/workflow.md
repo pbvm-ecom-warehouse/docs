@@ -50,6 +50,15 @@ MANAGER                    RECEIVER                  Hệ thống
 > **Put-away kích hoạt ngay khi GRN `CONFIRMED`** (đã cộng `onHand`, hàng sellable). MANAGER duyệt (`APPROVED`) là bước **audit**, có thể chạy **song song** với put-away — không chặn put-away. Sơ đồ vẽ tuần tự cho gọn.
 > GRN `CONFIRMED` cũng cập nhật trạng thái PO (`PARTIALLY_RECEIVED`/`COMPLETED`).
 
+> **Gợi ý vị trí put-away (advisory, theo kích thước):** với item `I` đã khai `unitVolume`, số lượng `Q`, trong kho `W` — hệ duyệt mọi shelf non-staging đã khai kích thước:
+> 1. **Ràng buộc 3 chiều (cho xoay 90°):** sắp giảm dần 3 chiều của `I` và shelf; yêu cầu `I[i] ≤ shelf[i]` mọi chiều — trượt thì loại (hàng quá to/dài không lọt tầng).
+> 2. **Đã chiếm** = `Σ (quantity × unitVolume)` mọi `InventoryStock` trên shelf (mọi SKU & lô) — tính **động** từ tồn thật, không lưu trường riêng.
+> 3. **Còn trống** = `usableVolume × fillFactor − đã chiếm`; **sức chứa** = `floor(còn trống ÷ I.unitVolume)`.
+> 4. **Xếp hạng:** ưu tiên shelf đã chứa cùng SKU (đủ `Q`) → rồi **best-fit** (còn trống nhỏ nhất mà vẫn đủ `Q`). Không shelf đơn nào đủ `Q` → gợi ý tổ hợp nhiều shelf (`A: 30, B: 20`).
+> 5. **Output:** `[mã shelf — còn chứa được N đơn vị]`; RECEIVER vẫn quét SKU + shelf để xác nhận, được đặt khác gợi ý. Hàng vượt mọi shelf → cảnh báo, xử lý thủ công.
+>
+> Định nghĩa field & dẫn xuất `usableVolume`/`unitVolume`: [data-model.md → Cấu trúc kho](data-model.md#nhóm-1-cấu-trúc-kho--vị-trí).
+
 ---
 
 ## WF-02: Lệnh in ly theo đơn hàng (UC-04)

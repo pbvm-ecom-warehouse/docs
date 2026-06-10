@@ -46,7 +46,13 @@ Warehouse → Zone → Rack → Shelf
 | rackId | ObjectId | Thuộc rack nào |
 | level | Number | Số tầng (1, 2, 3...) |
 | code | String | Mã tầng — **giá trị barcode vị trí** (dán tem ở mỗi shelf, quét khi put-away/pick) |
+| innerDepth | Number | Chiều sâu **lòng** tầng (cm) — tùy chọn, cần để gợi ý put-away |
+| innerWidth | Number | Chiều rộng lòng tầng (cm) — tùy chọn |
+| innerHeight | Number | Chiều cao khoảng tầng (cm) — tùy chọn |
+| fillFactor | Number | Hệ số lấp đầy riêng shelf (0–1), override mặc định hệ thống — tùy chọn |
 | isStaging | Boolean | `true` = shelf "khu nhận hàng" (mỗi kho có 1), nơi hàng nằm tạm sau GRN trước khi put-away |
+
+> **Sức chứa (cho gợi ý put-away):** `usableVolume = innerDepth × innerWidth × innerHeight` (cm³, dẫn xuất — không lưu). Shelf `isStaging` không cần kích thước (không bao giờ là đích gợi ý). `fillFactor` mặc định ở mức cấu hình hệ thống (vd `0.75`); shelf chỉ khai khi muốn ghi đè. Kích thước **tùy chọn**: shelf chưa khai → bỏ khỏi danh sách gợi ý. Xem [workflow.md → WF-01 Gợi ý vị trí](workflow.md#wf-01-nhập-hàng-từ-nhà-cung-cấp-uc-01--uc-02--uc-03).
 
 ---
 
@@ -71,6 +77,9 @@ Warehouse → Zone → Rack → Shelf
 | attributes | Array | Danh sách thuộc tính: `[{ name, value, code }]` |
 | isPerishable | Boolean | Theo dõi lô/hạn dùng? Mặc định `true` nếu `type = MATERIAL` |
 | nearExpiryDays | Number | Báo cận hạn trước bao nhiêu ngày (vd 7) — chỉ dùng khi `isPerishable` |
+| depth | Number | Chiều sâu **1 đơn vị cơ sở** (cm) — tùy chọn, cần để gợi ý put-away |
+| width | Number | Chiều rộng 1 đơn vị cơ sở (cm) — tùy chọn |
+| height | Number | Chiều cao 1 đơn vị cơ sở (cm) — tùy chọn |
 | isActive | Boolean | |
 
 > **Định danh vật lý:** quét `barcode` (hoặc `altBarcodes`) → tra ra đúng `WarehouseItem`. Quét mã chưa có trong hệ → **chặn**, yêu cầu khai báo item trước (không cho tồn kho "mồ côi").
@@ -82,6 +91,8 @@ Warehouse → Zone → Rack → Shelf
 | name | String | Tên thuộc tính (vd `ML`, `Màu`) |
 | value | String | Giá trị hiển thị, có dấu (vd `500ml`, `Đỏ`) |
 | code | String | Mã ngắn ASCII để ghép SKU (vd `500`, `RED`) |
+
+> **Thể tích đơn vị (cho gợi ý put-away):** `unitVolume = depth × width × height` (cm³, dẫn xuất). Khai lúc khai báo item, dùng lại cho mọi GRN. **Không** dùng cân nặng. Thiếu kích thước → item không được gợi ý vị trí, RECEIVER put-away nhập tay.
 
 **Quy ước sinh SKU (tự gợi ý + sửa được):**
 
