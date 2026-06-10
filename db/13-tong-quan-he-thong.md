@@ -33,35 +33,44 @@ Hệ thống được thiết kế theo mô hình **Service-Oriented** với d�
 Mọi quyết định thiết kế trong 45 bảng đều được xây dựng dựa trên 5 nguyên tắc nền tảng sau (Xem chi tiết tại [00 — 5 khái niệm lõi](00-khai-niem-loi.md)):
 
 ### 1. Tách biệt góc nhìn (WMS vs Ecom) qua SKU
+
 Cùng một "ly nhựa 500ml" nhưng góc nhìn và thông tin lưu trữ ở hai phía hoàn toàn khác nhau. Chúng chỉ gặp nhau ở một từ khóa duy nhất: `sku`.
-*   **WMS (`wms_db`)**: Tập trung vào mặt vật lý (kích thước, loại hàng, vị trí chính xác trên kệ, số lô, hạn sử dụng). *Không có trường giá.*
-*   **Ecom (`ecom_db`)**: Tập trung vào khía cạnh marketing/thương mại (tên hiển thị, mô tả sản phẩm, hình ảnh đẹp, giá bán lẻ, cấu trúc danh mục, SEO). *Không cần biết hàng nằm ở shelf nào.*
+
+- **WMS (`wms_db`)**: Tập trung vào mặt vật lý (kích thước, loại hàng, vị trí chính xác trên kệ, số lô, hạn sử dụng). _Không có trường giá._
+- **Ecom (`ecom_db`)**: Tập trung vào khía cạnh marketing/thương mại (tên hiển thị, mô tả sản phẩm, hình ảnh đẹp, giá bán lẻ, cấu trúc danh mục, SEO). _Không cần biết hàng nằm ở shelf nào._
 
 ### 2. Quản lý tồn kho hai lớp (Two-Layer Stock)
+
 Đây là thiết kế tối quan trọng giải quyết bài toán: vừa hiển thị tồn chính xác trên web cực nhanh, vừa chỉ đường cho nhân viên kho lấy hàng chuẩn xác (Xem chi tiết tại [02 — Hàng hóa & tồn kho 2 lớp](02-hang-hoa-va-ton-kho.md)):
 
 $$\text{StockBalances.available} = \text{onHand} - \text{reserved} - \text{expired}$$
 
-*   **Lớp 1 (Tổng quan - `stock_balances`)**: Lưu tổng lượng tồn theo SKU và Kho. Dùng để chống bán vượt (oversell) và đồng bộ sang Ecommerce.
-*   **Lớp 2 (Chi tiết vị trí - `inventory_stocks`)**: Lưu chi tiết sản phẩm nằm ở vị trí nào (shelf nào), thuộc lô nào (lot nào), số lượng bao nhiêu.
-*   **Đồng bộ**: Cả hai lớp phải được cập nhật đồng thời trong một transaction. Tổng số lượng ở lớp 2 luôn bằng `onHand` của lớp 1.
+- **Lớp 1 (Tổng quan - `stock_balances`)**: Lưu tổng lượng tồn theo SKU và Kho. Dùng để chống bán vượt (oversell) và đồng bộ sang Ecommerce.
+- **Lớp 2 (Chi tiết vị trí - `inventory_stocks`)**: Lưu chi tiết sản phẩm nằm ở vị trí nào (shelf nào), thuộc lô nào (lot nào), số lượng bao nhiêu.
+- **Đồng bộ**: Cả hai lớp phải được cập nhật đồng thời trong một transaction. Tổng số lượng ở lớp 2 luôn bằng `onHand` của lớp 1.
 
 ### 3. Sổ cái bất biến (Append-Only Ledger)
+
 Hệ thống sử dụng hai bảng đặc biệt hoạt động theo cơ chế **chỉ thêm dòng mới, không sửa, không xóa**:
-*   `stock_movements`: Ghi lại mọi biến động nhập/xuất/điều chuyển vật lý của kho (thẻ kho).
-*   `payment_transactions`: Ghi lại mọi giao dịch tài chính (thu tiền online, thu COD, hoàn tiền).
+
+- `stock_movements`: Ghi lại mọi biến động nhập/xuất/điều chuyển vật lý của kho (thẻ kho).
+- `payment_transactions`: Ghi lại mọi giao dịch tài chính (thu tiền online, thu COD, hoàn tiền).
 
 > [!NOTE]
 > Các trường trạng thái như `Order.paymentStatus` hay `StockBalances.onHand` chỉ là **dữ liệu cache dẫn xuất** được tính toán và tối ưu hóa từ hai sổ cái này. Nếu có sai sót, hệ thống bắt buộc phải ghi dòng đảo (bút toán điều chỉnh) để đối soát dòng tiền và dòng hàng một cách minh bạch.
 
 ### 4. Đóng băng lịch sử (Snapshotting)
+
 Để tránh việc thay đổi dữ liệu danh mục (như cập nhật giá bán, đổi tên sản phẩm, xóa địa chỉ của khách hàng) làm ảnh hưởng hoặc làm méo mó thông tin của các đơn hàng đã hoàn tất trong quá khứ, hệ thống thực hiện sao chép cứng dữ liệu tại thời điểm giao dịch:
-*   `order_items`: Lưu bản sao cứng của `name` và `unitPrice`.
-*   `orders.shippingAddress`: Lưu bản sao địa chỉ giao hàng tại thời điểm đặt.
-*   `shipments.recipient`: Lưu bản sao thông tin người nhận `{name, phone, address}` được truyền qua event để WMS đóng gói mà không cần đọc database Ecommerce.
+
+- `order_items`: Lưu bản sao cứng của `name` và `unitPrice`.
+- `orders.shippingAddress`: Lưu bản sao địa chỉ giao hàng tại thời điểm đặt.
+- `shipments.recipient`: Lưu bản sao thông tin người nhận `{name, phone, address}` được truyền qua event để WMS đóng gói mà không cần đọc database Ecommerce.
 
 ### 5. Đơn hàng với 3 trục trạng thái độc lập
+
 Thay vì dùng 1 trạng thái duy nhất dẫn đến xung đột logic khi có nhiều hình thức thanh toán (COD vs Online) và hình thức chuẩn bị hàng (Hàng có sẵn vs In theo yêu cầu), hệ thống tách biệt thành 3 trục độc lập:
+
 1.  **`orderStatus`** (Vòng đời pháp lý đơn): `PLACED` $\rightarrow$ `CONFIRMED` $\rightarrow$ `CLOSED` / `CANCELLED`.
 2.  **`paymentStatus`** (Dòng tiền): `UNPAID` $\rightarrow$ `PAID` $\rightarrow$ `REFUND_PENDING` $\rightarrow$ `REFUNDED`.
 3.  **`fulfillmentStatus`** (Vận hành kho & giao nhận): `NONE` $\rightarrow$ `AWAITING_PRINT` (Chờ in) $\rightarrow$ `READY_TO_PICK` $\rightarrow$ `ISSUED` $\rightarrow$ `SHIPPED` $\rightarrow$ `DELIVERED` / `RETURNED`.
@@ -131,68 +140,78 @@ erDiagram
 ### 1. Phân Hệ WMS (Quản lý kho nội bộ - `wms_db`)
 
 #### A. Cấu trúc kho vật lý (Warehouse Structure)
-*   **Warehouses**: Quản lý thông tin kho. Phân loại `CENTRAL` (Kho trung tâm - ưu tiên điều phối hàng) và `SUB` (Kho phụ). (Xem [01 — Kho & vị trí](01-kho-va-vi-tri.md))
-*   **Zones $\rightarrow$ Racks $\rightarrow$ Shelves**: Tổ chức không gian lưu trữ theo cấu trúc hình cây.
-    *   `shelves` là ô/tầng kệ cụ thể và có lưu mã barcode (`code`). Đây là điểm quét thực tế của nhân viên kho.
-    *   Trường `isStaging` trong `shelves` đánh dấu đây là khu vực đệm nhận hàng (hàng vừa nhập từ xe tải, chưa xếp lên kệ).
+
+- **Warehouses**: Quản lý thông tin kho. Phân loại `CENTRAL` (Kho trung tâm - ưu tiên điều phối hàng) và `SUB` (Kho phụ). (Xem [01 — Kho & vị trí](01-kho-va-vi-tri.md))
+- **Zones $\rightarrow$ Racks $\rightarrow$ Shelves**: Tổ chức không gian lưu trữ theo cấu trúc hình cây.
+  - `shelves` là ô/tầng kệ cụ thể và có lưu mã barcode (`code`). Đây là điểm quét thực tế của nhân viên kho.
+  - Trường `isStaging` trong `shelves` đánh dấu đây là khu vực đệm nhận hàng (hàng vừa nhập từ xe tải, chưa xếp lên kệ).
 
 #### B. Hàng hóa, Tồn kho & Lô hàng (Inventory & Lot)
-*   **Warehouse_items**: Định nghĩa hàng hóa trong kho. Tồn kho và quy trình vận hành dựa hoàn toàn vào đơn vị cơ sở (`unit`). Trường `altUnits` hỗ trợ quy đổi đơn vị (ví dụ: 1 thùng = 50 cái).
-*   **Lots**: Quản lý lô sản xuất và ngày hết hạn (`expiryDate`). Hệ thống chạy nghiệp vụ xuất hàng theo phương pháp **FEFO** (First Expired, First Out - lô cận hạn xuất trước).
-*   **Stock_balances (Lớp 1)**: Quản lý lượng hàng khả dụng để bán:
-    $$\text{available} = \text{onHand} - \text{reserved} - \text{expired}$$
-*   **Inventory_stocks (Lớp 2)**: Quản lý hàng hóa cụ thể theo từng shelf và từng lot.
-*   **Stock_movements**: Sổ cái ghi lại mọi lịch sử biến động số lượng vật lý kèm tham chiếu chứng từ (`refId`, `refType`).
+
+- **Warehouse_items**: Định nghĩa hàng hóa trong kho. Tồn kho và quy trình vận hành dựa hoàn toàn vào đơn vị cơ sở (`unit`). Trường `altUnits` hỗ trợ quy đổi đơn vị (ví dụ: 1 thùng = 50 cái).
+- **Lots**: Quản lý lô sản xuất và ngày hết hạn (`expiryDate`). Hệ thống chạy nghiệp vụ xuất hàng theo phương pháp **FEFO** (First Expired, First Out - lô cận hạn xuất trước).
+- **Stock_balances (Lớp 1)**: Quản lý lượng hàng khả dụng để bán:
+  $$\text{available} = \text{onHand} - \text{reserved} - \text{expired}$$
+- **Inventory_stocks (Lớp 2)**: Quản lý hàng hóa cụ thể theo từng shelf và từng lot.
+- **Stock_movements**: Sổ cái ghi lại mọi lịch sử biến động số lượng vật lý kèm tham chiếu chứng từ (`refId`, `refType`).
 
 #### C. Quy trình Nhập kho (Inbound Process)
-*   **Purchase_orders (+ items)**: Đơn đặt hàng NCC. (Xem [03 — Nhập kho](03-nhap-kho.md))
-*   **Goods_receive_notes (+ items)**: Phiếu thực nhận hàng tại kho. Khi chuyển trạng thái sang `APPROVED`, hàng được ghi nhận vào kho tại khu vực đệm: `onHand` tăng, ghi sổ `stock_movements` với type `RECEIVE`, vị trí chỉ định là `shelf` có `isStaging = true`.
-*   **Putaway_tasks (+ items)**: Phiếu chỉ định xếp hàng từ khu đệm (`isStaging = true`) lên các kệ hàng thật (`isStaging = false`). Khi hoàn tất, hệ thống ghi 2 dòng movement đối ứng:
-    *   `PUTAWAY -` (trừ tại khu staging)
-    *   `PUTAWAY +` (cộng tại shelf thật)
-    *   *Tổng số lượng `onHand` của kho không đổi nhưng tồn chi tiết tại các shelf được cập nhật chuẩn xác.*
+
+- **Purchase_orders (+ items)**: Đơn đặt hàng NCC. (Xem [03 — Nhập kho](03-nhap-kho.md))
+- **Goods_receive_notes (+ items)**: Phiếu thực nhận hàng tại kho. Khi chuyển trạng thái sang `APPROVED`, hàng được ghi nhận vào kho tại khu vực đệm: `onHand` tăng, ghi sổ `stock_movements` với type `RECEIVE`, vị trí chỉ định là `shelf` có `isStaging = true`.
+- **Putaway_tasks (+ items)**: Phiếu chỉ định xếp hàng từ khu đệm (`isStaging = true`) lên các kệ hàng thật (`isStaging = false`). Khi hoàn tất, hệ thống ghi 2 dòng movement đối ứng:
+  - `PUTAWAY -` (trừ tại khu staging)
+  - `PUTAWAY +` (cộng tại shelf thật)
+  - _Tổng số lượng `onHand` của kho không đổi nhưng tồn chi tiết tại các shelf được cập nhật chuẩn xác._
 
 #### D. Lệnh in ly Make-To-Order (Print Jobs)
+
 Hệ thống hỗ trợ in ấn thiết kế riêng theo từng đơn hàng (`fulfillmentType = CUSTOM_PRINT`):
-*   **Print_jobs (+ items)**: Theo dõi lệnh in. Đầu vào (`inputItemId`) là ly trắng (`CUP_BLANK`), đầu ra (`outputItemId`) là ly đã in thiết kế riêng (`CUP_PRINTED` - được gán SKU riêng theo mẫu thiết kế). (Xem [04 — In ly](04-in-ly.md))
-*   **Logic chuyển đổi tồn cực kỳ tinh tế**:
-    1.  Tạo lệnh in: Tồn ly trắng bị giữ lại: `CUP_BLANK.reserved += quantity`.
-    2.  Bắt đầu in: Tiêu thụ thực tế ly trắng: `CUP_BLANK.onHand -= quantity` và `CUP_BLANK.reserved -= quantity`. Ghi movement `PRINT_CONSUME -`.
-    3.  In xong: Tạo ra ly in mới và lập tức giữ riêng cho đơn hàng đó: `CUP_PRINTED.onHand += quantity` và `CUP_PRINTED.reserved += quantity`. Ghi movement `PRINT_OUTPUT +`.
-    4.  Xuất kho giao hàng: Xuất ly đã in đi: `CUP_PRINTED.onHand -= quantity` và `CUP_PRINTED.reserved -= quantity`. Ghi movement `ISSUE -`.
+
+- **Print_jobs (+ items)**: Theo dõi lệnh in. Đầu vào (`inputItemId`) là ly trắng (`CUP_BLANK`), đầu ra (`outputItemId`) là ly đã in thiết kế riêng (`CUP_PRINTED` - được gán SKU riêng theo mẫu thiết kế). (Xem [04 — In ly](04-in-ly.md))
+- **Logic chuyển đổi tồn cực kỳ tinh tế**:
+  1.  Tạo lệnh in: Tồn ly trắng bị giữ lại: `CUP_BLANK.reserved += quantity`.
+  2.  Bắt đầu in: Tiêu thụ thực tế ly trắng: `CUP_BLANK.onHand -= quantity` và `CUP_BLANK.reserved -= quantity`. Ghi movement `PRINT_CONSUME -`.
+  3.  In xong: Tạo ra ly in mới và lập tức giữ riêng cho đơn hàng đó: `CUP_PRINTED.onHand += quantity` và `CUP_PRINTED.reserved += quantity`. Ghi movement `PRINT_OUTPUT +`.
+  4.  Xuất kho giao hàng: Xuất ly đã in đi: `CUP_PRINTED.onHand -= quantity` và `CUP_PRINTED.reserved -= quantity`. Ghi movement `ISSUE -`.
 
 #### E. Xuất kho & Nghiệp vụ nội bộ (Outbound & Internal)
-*   **Goods_issues (+ items)**: Phiếu xuất hàng giao cho khách. Giảm `onHand` và `reserved` của kho, ghi movement `ISSUE -`. (Xem [05 — Xuất kho & nội bộ](05-xuat-kho-va-noi-bo.md))
-*   **Stock_counts (+ items)**: Phiếu kiểm kê kho. Khi phê duyệt, ghi nhận chênh lệch qua movement `ADJUST ±delta` để đồng bộ lại số tồn hệ thống khớp thực tế.
-*   **Stock_transfers (+ items)**: Phiếu chuyển kho nội bộ. Sinh 2 bút toán đối ứng `TRANSFER_OUT -` tại kho gửi và `TRANSFER_IN +` tại kho nhận.
-*   **Scrap_notes (+ items)**: Phiếu thanh lý hàng hỏng/hết hạn. Giảm `onHand` (và giảm `expired` nếu là hàng hết hạn), ghi movement `SCRAP -`.
-*   **Goods_returns (+ items)**: Phiếu nhận hàng hoàn trả từ khách hàng. Nếu kiểm tra hàng còn tốt (`condition = GOOD`), nhập lại kệ bán và tăng `onHand`, bắn event đồng bộ tồn lên Ecommerce. Nếu hỏng (`DAMAGED`), đưa sang phân khu chờ hủy (Scrap).
+
+- **Goods_issues (+ items)**: Phiếu xuất hàng giao cho khách. Giảm `onHand` và `reserved` của kho, ghi movement `ISSUE -`. (Xem [05 — Xuất kho & nội bộ](05-xuat-kho-va-noi-bo.md))
+- **Stock_counts (+ items)**: Phiếu kiểm kê kho. Khi phê duyệt, ghi nhận chênh lệch qua movement `ADJUST ±delta` để đồng bộ lại số tồn hệ thống khớp thực tế.
+- **Stock_transfers (+ items)**: Phiếu chuyển kho nội bộ. Sinh 2 bút toán đối ứng `TRANSFER_OUT -` tại kho gửi và `TRANSFER_IN +` tại kho nhận.
+- **Scrap_notes (+ items)**: Phiếu thanh lý hàng hỏng/hết hạn. Giảm `onHand` (và giảm `expired` nếu là hàng hết hạn), ghi movement `SCRAP -`.
+- **Goods_returns (+ items)**: Phiếu nhận hàng hoàn trả từ khách hàng. Nếu kiểm tra hàng còn tốt (`condition = GOOD`), nhập lại kệ bán và tăng `onHand`, bắn event đồng bộ tồn lên Ecommerce. Nếu hỏng (`DAMAGED`), đưa sang phân khu chờ hủy (Scrap).
 
 #### F. Phân hệ phụ trợ (Supplier, Shipping & Staff Auth)
-*   **Suppliers & Supplier_items**: Danh mục NCC và bảng giá nhập của từng SKU. Hiện tại thiết kế ràng buộc 1 SKU chỉ có 1 NCC chính (`itemId` là unique trong `supplier_items`). (Xem [06 — Supplier](06-supplier.md))
-*   **Carriers & Shipments**: Quản lý đơn vị vận chuyển và hành trình giao đơn hàng. 1 phiếu xuất kho (`goods_issue`) đi kèm đúng 1 vận đơn (`shipment`). (Xem [07 — Shipping](07-shipping.md))
-*   **Users & User_refresh_tokens**: Quản lý nhân viên kho và phân quyền hành động (`ADMIN`, `MANAGER`, `RECEIVER`, `PICKER`, `PRINTER`, `COUNTER`). (Xem [08 — Auth-WMS](08-auth-wms.md))
+
+- **Suppliers & Supplier_items**: Danh mục NCC và bảng giá nhập của từng SKU. Hiện tại thiết kế ràng buộc 1 SKU chỉ có 1 NCC chính (`itemId` là unique trong `supplier_items`). (Xem [06 — Supplier](06-supplier.md))
+- **Carriers & Shipments**: Quản lý đơn vị vận chuyển và hành trình giao đơn hàng. 1 phiếu xuất kho (`goods_issue`) đi kèm đúng 1 vận đơn (`shipment`). (Xem [07 — Shipping](07-shipping.md))
+- **Users & User_refresh_tokens**: Quản lý nhân viên kho và phân quyền hành động (`ADMIN`, `MANAGER`, `RECEIVER`, `PICKER`, `PRINTER`, `COUNTER`). (Xem [08 — Auth-WMS](08-auth-wms.md))
 
 ---
 
 ### 2. Phân Hệ Ecommerce (Kênh bán hàng - `ecom_db`)
 
 #### A. Catalog (Danh mục & Biến thể)
-*   **Categories**: Danh mục sản phẩm tổ chức dạng cây phân cấp nhờ liên kết tự tham chiếu (`parentId`). (Xem [09 — Catalog](09-catalog.md))
-*   **Products & Product_variants**:
-    *   `products` chứa thông tin hình ảnh, mô tả chung.
-    *   `product_variants` chứa thông tin chi tiết từng phiên bản bán (kích thước, màu sắc), giá bán lẻ (`price`) và **bản copy số lượng tồn khả dụng** (`availableQty`).
-    *   `availableQty` được đồng bộ bất đồng bộ từ trường `available` của WMS để Ecommerce hiển thị nhanh chóng trên giao diện web. Tuy nhiên, đây không phải nguồn chân lý cuối cùng khi chốt đơn.
-*   **Designs**: Thư viện chứa các file thiết kế do khách hàng tự upload để in ly theo yêu cầu.
+
+- **Categories**: Danh mục sản phẩm tổ chức dạng cây phân cấp nhờ liên kết tự tham chiếu (`parentId`). (Xem [09 — Catalog](09-catalog.md))
+- **Products & Product_variants**:
+  - `products` chứa thông tin hình ảnh, mô tả chung.
+  - `product_variants` chứa thông tin chi tiết từng phiên bản bán (kích thước, màu sắc), giá bán lẻ (`price`) và **bản copy số lượng tồn khả dụng** (`availableQty`).
+  - `availableQty` được đồng bộ bất đồng bộ từ trường `available` của WMS để Ecommerce hiển thị nhanh chóng trên giao diện web. Tuy nhiên, đây không phải nguồn chân lý cuối cùng khi chốt đơn.
+- **Designs**: Thư viện chứa các file thiết kế do khách hàng tự upload để in ly theo yêu cầu.
 
 #### B. Giỏ hàng & Đơn hàng (Cart & Order)
-*   **Carts (+ items)**: Giỏ hàng tạm thời của khách hàng. Chưa thực hiện giữ tồn kho. (Xem [10 — Order](10-order.md))
-*   **Orders (+ items)**: Đơn đặt hàng chính thức. Lưu thông tin thanh toán, địa chỉ nhận hàng và kho thực hiện đóng gói (`fulfillWarehouseId`).
-*   **Payment_transactions**: Sổ cái ghi nhận lịch sử thanh toán (Online, COD, Refund).
+
+- **Carts (+ items)**: Giỏ hàng tạm thời của khách hàng. Chưa thực hiện giữ tồn kho. (Xem [10 — Order](10-order.md))
+- **Orders (+ items)**: Đơn đặt hàng chính thức. Lưu thông tin thanh toán, địa chỉ nhận hàng và kho thực hiện đóng gói (`fulfillWarehouseId`).
+- **Payment_transactions**: Sổ cái ghi nhận lịch sử thanh toán (Online, COD, Refund).
 
 #### C. Khách hàng (Customer Auth)
-*   **Customers**: Danh bạ thông tin khách hàng. Sổ địa chỉ nhận hàng (`addresses`) được nhúng trực tiếp (embedded) vào tài liệu customer để tối ưu hóa hiệu năng truy vấn. (Xem [11 — Auth-Ecom](11-auth-ecom.md))
-*   **Customer_refresh_tokens & Customer_auth_tokens**: Quản lý phiên đăng nhập và các token một lần (xác thực email, đặt lại mật khẩu).
+
+- **Customers**: Danh bạ thông tin khách hàng. Sổ địa chỉ nhận hàng (`addresses`) được nhúng trực tiếp (embedded) vào tài liệu customer để tối ưu hóa hiệu năng truy vấn. (Xem [11 — Auth-Ecom](11-auth-ecom.md))
+- **Customer_refresh_tokens & Customer_auth_tokens**: Quản lý phiên đăng nhập và các token một lần (xác thực email, đặt lại mật khẩu).
 
 ---
 
@@ -264,24 +283,26 @@ P7: Hoàn trả      (Nếu khách trả hàng - RMA) ────────�
 
 Để hệ thống vận hành trơn tru và không xảy ra các lỗi nghiêm trọng (như lệch tồn kho, lệch tiền, hoặc bán vượt số lượng thực tế), cơ sở dữ liệu phải luôn thỏa mãn các điều kiện bất biến sau:
 
-| STT | Ràng Buộc Bất Biến | Mô Tả Kỹ Thuật |
-|---|---|---|
-| **1** | **Khớp tồn hai lớp** | Với mỗi SKU ở một kho nhất định, giá trị `stock_balances.onHand` phải luôn bằng tổng số lượng tồn chi tiết tại các vị trí kệ thuộc kho đó: `Σ inventory_stocks.quantity`. |
-| **2** | **Khớp sổ cái thẻ kho** | Giá trị `stock_balances.onHand` hiện tại phải bằng tổng tích lũy lịch sử các dòng biến động trong thẻ kho: `Σ stock_movements.quantity`. |
-| **3** | **Không âm tồn khả dụng** | Công thức tính: $\text{available} = \text{onHand} - \text{reserved} - \text{expired}$. Giá trị này phải luôn $\ge 0$. |
-| **4** | **Một đơn - Một kho - Một kiện** | Một đơn hàng (`order`) chỉ được xử lý giữ tồn tại duy nhất một kho (`fulfillWarehouseId`) và đi kèm với đúng một vận đơn vận chuyển (`shipment`). Hệ thống chưa hỗ trợ tách đơn giao từ nhiều kho. |
-| **5** | **Khớp sổ cái tài chính** | Trạng thái thanh toán của đơn hàng (`order.paymentStatus`) phải là kết quả tính toán trực tiếp từ tổng số tiền thu/chi thành công ghi nhận tại sổ cái: `payment_transactions` (CHARGE, REFUND, COD_COLLECT). |
-| **6** | **Chống bán vượt lúc đặt** | Việc kiểm tra tồn khả dụng thực tế và cộng dồn lượng giữ hàng (`reserved += quantity`) phải được bọc trong một **Transaction duy nhất** khóa tài liệu (document-level lock) trên `wms_db.stock_balances`. |
+| STT   | Ràng Buộc Bất Biến               | Mô Tả Kỹ Thuật                                                                                                                                                                                               |
+| ----- | -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **1** | **Khớp tồn hai lớp**             | Với mỗi SKU ở một kho nhất định, giá trị `stock_balances.onHand` phải luôn bằng tổng số lượng tồn chi tiết tại các vị trí kệ thuộc kho đó: `Σ inventory_stocks.quantity`.                                    |
+| **2** | **Khớp sổ cái thẻ kho**          | Giá trị `stock_balances.onHand` hiện tại phải bằng tổng tích lũy lịch sử các dòng biến động trong thẻ kho: `Σ stock_movements.quantity`.                                                                     |
+| **3** | **Không âm tồn khả dụng**        | Công thức tính: $\text{available} = \text{onHand} - \text{reserved} - \text{expired}$. Giá trị này phải luôn $\ge 0$.                                                                                        |
+| **4** | **Một đơn - Một kho - Một kiện** | Một đơn hàng (`order`) chỉ được xử lý giữ tồn tại duy nhất một kho (`fulfillWarehouseId`) và đi kèm với đúng một vận đơn vận chuyển (`shipment`). Hệ thống chưa hỗ trợ tách đơn giao từ nhiều kho.           |
+| **5** | **Khớp sổ cái tài chính**        | Trạng thái thanh toán của đơn hàng (`order.paymentStatus`) phải là kết quả tính toán trực tiếp từ tổng số tiền thu/chi thành công ghi nhận tại sổ cái: `payment_transactions` (CHARGE, REFUND, COD_COLLECT). |
+| **6** | **Chống bán vượt lúc đặt**       | Việc kiểm tra tồn khả dụng thực tế và cộng dồn lượng giữ hàng (`reserved += quantity`) phải được bọc trong một **Transaction duy nhất** khóa tài liệu (document-level lock) trên `wms_db.stock_balances`.    |
 
 ---
 
 ## VII. Hành Trình Của Một Chiếc Ly (Luồng Nghiệp Vụ Dễ Hiểu Nhất)
 
 Để dễ hình dung toàn bộ các khái niệm kỹ thuật ở trên, hãy tưởng tượng bạn có một nhà kho (WMS) và một cửa hàng online (Ecommerce).
-*   **Kho (WMS):** Chỉ quan tâm đến hàng hóa vật lý. Hàng to nhỏ thế nào, nằm ở kệ nào, hạn sử dụng đến bao giờ, tổng cộng có bao nhiêu cái.
-*   **Cửa hàng (Ecom):** Chỉ quan tâm đến việc bán hàng. Tên sản phẩm kêu không, hình ảnh đẹp không, giá bao nhiêu, và "còn hàng không để bán?".
+
+- **Kho (WMS):** Chỉ quan tâm đến hàng hóa vật lý. Hàng to nhỏ thế nào, nằm ở kệ nào, hạn sử dụng đến bao giờ, tổng cộng có bao nhiêu cái.
+- **Cửa hàng (Ecom):** Chỉ quan tâm đến việc bán hàng. Tên sản phẩm kêu không, hình ảnh đẹp không, giá bao nhiêu, và "còn hàng không để bán?".
 
 **Luật chơi cốt lõi của hệ thống này là:**
+
 1.  **Không ai thọc tay vào túi người kia:** Kho và Cửa hàng có "sổ sách" (Database) riêng biệt. Cửa hàng không bao giờ được tự ý chạy sang Kho xem sổ, và ngược lại.
 2.  **Giao tiếp qua "người đưa thư" (Sự kiện/Event):** Khi Kho nhập thêm hàng, Kho sẽ đưa thư cho "người đưa thư" (BullMQ + Redis) bảo rằng: "Báo cho Cửa hàng biết món mã `LY-500` vừa có thêm 100 cái nhé". Cửa hàng nhận thư và tự ghi chú lại số lượng để hiện lên web.
 3.  **Khớp nhau bằng đúng một "Mật khẩu":** Đó là **Mã SKU**. Cả hai bên chỉ nhận diện sản phẩm chung thông qua mã SKU này.
@@ -291,45 +312,53 @@ P7: Hoàn trả      (Nếu khách trả hàng - RMA) ────────�
 Chúng ta hãy theo dõi hành trình của một chiếc ly nhựa, từ lúc còn là ly trắng ở nhà cung cấp, cho đến khi được in hình và giao đến tay khách hàng.
 
 **Bước 0 (P0): Nhập hàng về kho (Inbound)**
-*   Quản lý kho đặt mua 1.000 chiếc ly trắng từ Nhà Cung Cấp.
-*   Khi xe tải chở hàng tới, nhân viên kho nhận hàng (tạo phiếu GRN). Lúc này, 1.000 chiếc ly được vứt tạm ở khu vực đệm (Staging). Hệ thống ghi nhận: "Đã có 1.000 ly trong kho".
-*   Ngay lập tức, Kho gửi thư báo cho Cửa hàng: *“Có thêm 1.000 ly trắng nhé!”*. Cửa hàng cập nhật lên web để khách thấy "Còn hàng".
-*   Sau đó, nhân viên kho từ từ kéo 1.000 ly này xếp ngay ngắn lên Kệ A, Tầng 2.
+
+- Quản lý kho đặt mua 1.000 chiếc ly trắng từ Nhà Cung Cấp.
+- Khi xe tải chở hàng tới, nhân viên kho nhận hàng (tạo phiếu GRN). Lúc này, 1.000 chiếc ly được vứt tạm ở khu vực đệm (Staging). Hệ thống ghi nhận: "Đã có 1.000 ly trong kho".
+- Ngay lập tức, Kho gửi thư báo cho Cửa hàng: _“Có thêm 1.000 ly trắng nhé!”_. Cửa hàng cập nhật lên web để khách thấy "Còn hàng".
+- Sau đó, nhân viên kho từ từ kéo 1.000 ly này xếp ngay ngắn lên Kệ A, Tầng 2.
 
 **Bước 1 & 2 (P1-P2): Khách hàng đi shopping**
-*   Khách hàng lướt web (Ecom) thấy ly nhựa. Web hiện số lượng "Còn 1.000 cái" (đây là số Cửa hàng tự nhớ nhờ thư báo của Kho lúc nãy).
-*   Khách chọn mua ly và yêu cầu **in thêm logo công ty** của họ lên ly. Khách tải file ảnh logo lên hệ thống và bỏ vào Giỏ hàng.
+
+- Khách hàng lướt web (Ecom) thấy ly nhựa. Web hiện số lượng "Còn 1.000 cái" (đây là số Cửa hàng tự nhớ nhờ thư báo của Kho lúc nãy).
+- Khách chọn mua ly và yêu cầu **in thêm logo công ty** của họ lên ly. Khách tải file ảnh logo lên hệ thống và bỏ vào Giỏ hàng.
 
 **Bước 3 (P3): Chốt đơn & Trận chiến giữ hàng (Checkout)**
 Đây là khâu **quan trọng và xịn xò nhất** của hệ thống để chống việc bán lố hàng (oversell).
-*   Giả sử còn đúng 1 cái ly, mà có 2 khách cùng bấm "Thanh toán" một lúc thì sao?
-*   Hệ thống dùng một **"phép thuật" khóa chặt (Transaction Atomic xuyên 2 Database)**: Ngay khoảnh khắc khách bấm thanh toán, hệ thống chớp nhoáng chạy đồng thời sang cả sổ của Kho và sổ của Cửa hàng. Nó giành lấy 1 chiếc ly trong Kho (chuyển sang trạng thái "Đã giữ / Reserved") và đồng thời trừ đi 1 ly trên Web. Ai đến trước tính bằng mili-giây sẽ giành được chiếc ly đó.
-*   Kết quả: Khách giành được ly, tạo thành công Mã Đơn Hàng.
+
+- Giả sử còn đúng 1 cái ly, mà có 2 khách cùng bấm "Thanh toán" một lúc thì sao?
+- Hệ thống dùng một **"phép thuật" khóa chặt (Transaction Atomic xuyên 2 Database)**: Ngay khoảnh khắc khách bấm thanh toán, hệ thống chớp nhoáng chạy đồng thời sang cả sổ của Kho và sổ của Cửa hàng. Nó giành lấy 1 chiếc ly trong Kho (chuyển sang trạng thái "Đã giữ / Reserved") và đồng thời trừ đi 1 ly trên Web. Ai đến trước tính bằng mili-giây sẽ giành được chiếc ly đó.
+- Kết quả: Khách giành được ly, tạo thành công Mã Đơn Hàng.
 
 **Bước 4 (P4): Khách trả tiền**
-*   Khách thanh toán Online thành công. Sổ cái tài chính của Cửa hàng ghi nhận: Đã thu tiền (PAID).
-*   Vì đơn này có yêu cầu "In logo", Cửa hàng lập tức gửi thư hỏa tốc sang Kho: *“Đơn hàng #123 đã trả tiền, đem ly đi in logo ngay!”*.
+
+- Khách thanh toán Online thành công. Sổ cái tài chính của Cửa hàng ghi nhận: Đã thu tiền (PAID).
+- Vì đơn này có yêu cầu "In logo", Cửa hàng lập tức gửi thư hỏa tốc sang Kho: _“Đơn hàng #123 đã trả tiền, đem ly đi in logo ngay!”_.
 
 **Bước 5 (P5): Kho xắn tay áo đi in ly (Make-to-Order)**
-*   Nhân viên kho nhận được lệnh in. Họ cầm lệnh đi tới Kệ A, Tầng 2 lấy ra chiếc ly trắng (Ly trắng chính thức bị tiêu thụ).
-*   Đưa ly trắng qua máy in cùng file logo của khách. Máy chạy rè rè... Tèn ten! Một chiếc ly in logo ra đời.
-*   Chiếc ly lúc này **đổi mã SKU** (từ Ly Trắng thành Ly Đã In). Hệ thống Kho tự động cất chiếc ly in này đi và dán nhãn "Đã giữ cho đơn #123".
-*   Kho gửi thư báo lại Cửa hàng: *“In xong rồi nhé, gom hàng đi giao thôi!”* (Trạng thái đơn: Chờ nhặt hàng - READY_TO_PICK).
+
+- Nhân viên kho nhận được lệnh in. Họ cầm lệnh đi tới Kệ A, Tầng 2 lấy ra chiếc ly trắng (Ly trắng chính thức bị tiêu thụ).
+- Đưa ly trắng qua máy in cùng file logo của khách. Máy chạy rè rè... Tèn ten! Một chiếc ly in logo ra đời.
+- Chiếc ly lúc này **đổi mã SKU** (từ Ly Trắng thành Ly Đã In). Hệ thống Kho tự động cất chiếc ly in này đi và dán nhãn "Đã giữ cho đơn #123".
+- Kho gửi thư báo lại Cửa hàng: _“In xong rồi nhé, gom hàng đi giao thôi!”_ (Trạng thái đơn: Chờ nhặt hàng - READY_TO_PICK).
 
 **Bước 6 (P6): Nhặt hàng và Xuất kho (Outbound)**
-*   Nhân viên kho (Picker) đẩy xe đi nhặt hàng. Hệ thống thông minh chỉ đích danh: "Hãy ra lấy chiếc ly in của đơn #123". Nếu là hàng thực phẩm, hệ thống sẽ ưu tiên chỉ ra lấy lô hàng nào sắp hết hạn (FEFO) để tống đi trước.
-*   Nhân viên quét mã vạch cái "tít". Hàng chính thức rời khỏi Kho (Xuất kho - ISSUED). Tồn kho vật lý chính thức giảm đi 1.
-*   Hệ thống tự động sinh ra một Vận Đơn (Shipment) để chuẩn bị đưa cho anh shipper.
+
+- Nhân viên kho (Picker) đẩy xe đi nhặt hàng. Hệ thống thông minh chỉ đích danh: "Hãy ra lấy chiếc ly in của đơn #123". Nếu là hàng thực phẩm, hệ thống sẽ ưu tiên chỉ ra lấy lô hàng nào sắp hết hạn (FEFO) để tống đi trước.
+- Nhân viên quét mã vạch cái "tít". Hàng chính thức rời khỏi Kho (Xuất kho - ISSUED). Tồn kho vật lý chính thức giảm đi 1.
+- Hệ thống tự động sinh ra một Vận Đơn (Shipment) để chuẩn bị đưa cho anh shipper.
 
 **Bước 7 (P7): Giao hàng đến tay khách**
-*   Anh shipper (Carrier) tới lấy hàng. Trạng thái vận đơn đổi thành "Đang giao" (IN_TRANSIT).
-*   Shipper giao hàng tới nhà khách thành công. Trạng thái đổi thành "Đã giao" (DELIVERED).
-*   Nếu khách mua COD, tiền thu hộ sẽ được ghi nhận vào sổ cái tài chính lúc này. Đơn hàng chính thức khép lại (CLOSED).
+
+- Anh shipper (Carrier) tới lấy hàng. Trạng thái vận đơn đổi thành "Đang giao" (IN_TRANSIT).
+- Shipper giao hàng tới nhà khách thành công. Trạng thái đổi thành "Đã giao" (DELIVERED).
+- Nếu khách mua COD, tiền thu hộ sẽ được ghi nhận vào sổ cái tài chính lúc này. Đơn hàng chính thức khép lại (CLOSED).
 
 ### 2. Các Tình Huống Ngoại Lệ ("Quay Xe")
 
 Không phải lúc nào câu chuyện cũng suôn sẻ. Sẽ có lúc khách "quay xe":
-*   **Khách Hủy Đơn khi hàng chưa xuất kho:** Cửa hàng sẽ gửi thông báo hủy đơn cho Kho. Cửa hàng và Kho lại bắt tay nhau làm một phép thuật đảo ngược: Nhả chiếc ly đang bị "Giữ" (Reserved) ra, cộng lại số lượng lên Web để khách khác mua. Nếu khách đã trả tiền, hệ thống sẽ ghi sổ hoàn tiền (REFUND).
-*   **Khách đổi ý Trả Hàng (Sau khi đã nhận):** Khách gửi trả ly về Kho (RMA). Nhân viên kho sẽ ra kiểm tra:
-    *   *Nếu hàng còn ngon (GOOD):* Cất lại lên kệ, cộng tồn kho, và gửi thư báo Cửa hàng đăng bán lại.
-    *   *Nếu hàng hỏng / ly đã in logo riêng (DAMAGED):* Đem đi vứt (Tạo phiếu Scrap - Hủy hàng). Ly in logo công ty người ta rồi thì không bán cho ai khác được nữa.
+
+- **Khách Hủy Đơn khi hàng chưa xuất kho:** Cửa hàng sẽ gửi thông báo hủy đơn cho Kho. Cửa hàng và Kho lại bắt tay nhau làm một phép thuật đảo ngược: Nhả chiếc ly đang bị "Giữ" (Reserved) ra, cộng lại số lượng lên Web để khách khác mua. Nếu khách đã trả tiền, hệ thống sẽ ghi sổ hoàn tiền (REFUND).
+- **Khách đổi ý Trả Hàng (Sau khi đã nhận):** Khách gửi trả ly về Kho (RMA). Nhân viên kho sẽ ra kiểm tra:
+  - _Nếu hàng còn ngon (GOOD):_ Cất lại lên kệ, cộng tồn kho, và gửi thư báo Cửa hàng đăng bán lại.
+  - _Nếu hàng hỏng / ly đã in logo riêng (DAMAGED):_ Đem đi vứt (Tạo phiếu Scrap - Hủy hàng). Ly in logo công ty người ta rồi thì không bán cho ai khác được nữa.
