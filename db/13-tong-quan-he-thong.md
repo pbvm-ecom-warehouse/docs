@@ -272,3 +272,64 @@ P7: Hoàn trả      (Nếu khách trả hàng - RMA) ────────�
 | **4** | **Một đơn - Một kho - Một kiện** | Một đơn hàng (`order`) chỉ được xử lý giữ tồn tại duy nhất một kho (`fulfillWarehouseId`) và đi kèm với đúng một vận đơn vận chuyển (`shipment`). Hệ thống chưa hỗ trợ tách đơn giao từ nhiều kho. |
 | **5** | **Khớp sổ cái tài chính** | Trạng thái thanh toán của đơn hàng (`order.paymentStatus`) phải là kết quả tính toán trực tiếp từ tổng số tiền thu/chi thành công ghi nhận tại sổ cái: `payment_transactions` (CHARGE, REFUND, COD_COLLECT). |
 | **6** | **Chống bán vượt lúc đặt** | Việc kiểm tra tồn khả dụng thực tế và cộng dồn lượng giữ hàng (`reserved += quantity`) phải được bọc trong một **Transaction duy nhất** khóa tài liệu (document-level lock) trên `wms_db.stock_balances`. |
+
+---
+
+## VII. Hành Trình Của Một Chiếc Ly (Luồng Nghiệp Vụ Dễ Hiểu Nhất)
+
+Để dễ hình dung toàn bộ các khái niệm kỹ thuật ở trên, hãy tưởng tượng bạn có một nhà kho (WMS) và một cửa hàng online (Ecommerce).
+*   **Kho (WMS):** Chỉ quan tâm đến hàng hóa vật lý. Hàng to nhỏ thế nào, nằm ở kệ nào, hạn sử dụng đến bao giờ, tổng cộng có bao nhiêu cái.
+*   **Cửa hàng (Ecom):** Chỉ quan tâm đến việc bán hàng. Tên sản phẩm kêu không, hình ảnh đẹp không, giá bao nhiêu, và "còn hàng không để bán?".
+
+**Luật chơi cốt lõi của hệ thống này là:**
+1.  **Không ai thọc tay vào túi người kia:** Kho và Cửa hàng có "sổ sách" (Database) riêng biệt. Cửa hàng không bao giờ được tự ý chạy sang Kho xem sổ, và ngược lại.
+2.  **Giao tiếp qua "người đưa thư" (Sự kiện/Event):** Khi Kho nhập thêm hàng, Kho sẽ đưa thư cho "người đưa thư" (BullMQ + Redis) bảo rằng: "Báo cho Cửa hàng biết món mã `LY-500` vừa có thêm 100 cái nhé". Cửa hàng nhận thư và tự ghi chú lại số lượng để hiện lên web.
+3.  **Khớp nhau bằng đúng một "Mật khẩu":** Đó là **Mã SKU**. Cả hai bên chỉ nhận diện sản phẩm chung thông qua mã SKU này.
+
+### 1. Từ Lúc Nhập Kho Đến Tay Khách Hàng (7 Bước)
+
+Chúng ta hãy theo dõi hành trình của một chiếc ly nhựa, từ lúc còn là ly trắng ở nhà cung cấp, cho đến khi được in hình và giao đến tay khách hàng.
+
+**Bước 0 (P0): Nhập hàng về kho (Inbound)**
+*   Quản lý kho đặt mua 1.000 chiếc ly trắng từ Nhà Cung Cấp.
+*   Khi xe tải chở hàng tới, nhân viên kho nhận hàng (tạo phiếu GRN). Lúc này, 1.000 chiếc ly được vứt tạm ở khu vực đệm (Staging). Hệ thống ghi nhận: "Đã có 1.000 ly trong kho".
+*   Ngay lập tức, Kho gửi thư báo cho Cửa hàng: *“Có thêm 1.000 ly trắng nhé!”*. Cửa hàng cập nhật lên web để khách thấy "Còn hàng".
+*   Sau đó, nhân viên kho từ từ kéo 1.000 ly này xếp ngay ngắn lên Kệ A, Tầng 2.
+
+**Bước 1 & 2 (P1-P2): Khách hàng đi shopping**
+*   Khách hàng lướt web (Ecom) thấy ly nhựa. Web hiện số lượng "Còn 1.000 cái" (đây là số Cửa hàng tự nhớ nhờ thư báo của Kho lúc nãy).
+*   Khách chọn mua ly và yêu cầu **in thêm logo công ty** của họ lên ly. Khách tải file ảnh logo lên hệ thống và bỏ vào Giỏ hàng.
+
+**Bước 3 (P3): Chốt đơn & Trận chiến giữ hàng (Checkout)**
+Đây là khâu **quan trọng và xịn xò nhất** của hệ thống để chống việc bán lố hàng (oversell).
+*   Giả sử còn đúng 1 cái ly, mà có 2 khách cùng bấm "Thanh toán" một lúc thì sao?
+*   Hệ thống dùng một **"phép thuật" khóa chặt (Transaction Atomic xuyên 2 Database)**: Ngay khoảnh khắc khách bấm thanh toán, hệ thống chớp nhoáng chạy đồng thời sang cả sổ của Kho và sổ của Cửa hàng. Nó giành lấy 1 chiếc ly trong Kho (chuyển sang trạng thái "Đã giữ / Reserved") và đồng thời trừ đi 1 ly trên Web. Ai đến trước tính bằng mili-giây sẽ giành được chiếc ly đó.
+*   Kết quả: Khách giành được ly, tạo thành công Mã Đơn Hàng.
+
+**Bước 4 (P4): Khách trả tiền**
+*   Khách thanh toán Online thành công. Sổ cái tài chính của Cửa hàng ghi nhận: Đã thu tiền (PAID).
+*   Vì đơn này có yêu cầu "In logo", Cửa hàng lập tức gửi thư hỏa tốc sang Kho: *“Đơn hàng #123 đã trả tiền, đem ly đi in logo ngay!”*.
+
+**Bước 5 (P5): Kho xắn tay áo đi in ly (Make-to-Order)**
+*   Nhân viên kho nhận được lệnh in. Họ cầm lệnh đi tới Kệ A, Tầng 2 lấy ra chiếc ly trắng (Ly trắng chính thức bị tiêu thụ).
+*   Đưa ly trắng qua máy in cùng file logo của khách. Máy chạy rè rè... Tèn ten! Một chiếc ly in logo ra đời.
+*   Chiếc ly lúc này **đổi mã SKU** (từ Ly Trắng thành Ly Đã In). Hệ thống Kho tự động cất chiếc ly in này đi và dán nhãn "Đã giữ cho đơn #123".
+*   Kho gửi thư báo lại Cửa hàng: *“In xong rồi nhé, gom hàng đi giao thôi!”* (Trạng thái đơn: Chờ nhặt hàng - READY_TO_PICK).
+
+**Bước 6 (P6): Nhặt hàng và Xuất kho (Outbound)**
+*   Nhân viên kho (Picker) đẩy xe đi nhặt hàng. Hệ thống thông minh chỉ đích danh: "Hãy ra lấy chiếc ly in của đơn #123". Nếu là hàng thực phẩm, hệ thống sẽ ưu tiên chỉ ra lấy lô hàng nào sắp hết hạn (FEFO) để tống đi trước.
+*   Nhân viên quét mã vạch cái "tít". Hàng chính thức rời khỏi Kho (Xuất kho - ISSUED). Tồn kho vật lý chính thức giảm đi 1.
+*   Hệ thống tự động sinh ra một Vận Đơn (Shipment) để chuẩn bị đưa cho anh shipper.
+
+**Bước 7 (P7): Giao hàng đến tay khách**
+*   Anh shipper (Carrier) tới lấy hàng. Trạng thái vận đơn đổi thành "Đang giao" (IN_TRANSIT).
+*   Shipper giao hàng tới nhà khách thành công. Trạng thái đổi thành "Đã giao" (DELIVERED).
+*   Nếu khách mua COD, tiền thu hộ sẽ được ghi nhận vào sổ cái tài chính lúc này. Đơn hàng chính thức khép lại (CLOSED).
+
+### 2. Các Tình Huống Ngoại Lệ ("Quay Xe")
+
+Không phải lúc nào câu chuyện cũng suôn sẻ. Sẽ có lúc khách "quay xe":
+*   **Khách Hủy Đơn khi hàng chưa xuất kho:** Cửa hàng sẽ gửi thông báo hủy đơn cho Kho. Cửa hàng và Kho lại bắt tay nhau làm một phép thuật đảo ngược: Nhả chiếc ly đang bị "Giữ" (Reserved) ra, cộng lại số lượng lên Web để khách khác mua. Nếu khách đã trả tiền, hệ thống sẽ ghi sổ hoàn tiền (REFUND).
+*   **Khách đổi ý Trả Hàng (Sau khi đã nhận):** Khách gửi trả ly về Kho (RMA). Nhân viên kho sẽ ra kiểm tra:
+    *   *Nếu hàng còn ngon (GOOD):* Cất lại lên kệ, cộng tồn kho, và gửi thư báo Cửa hàng đăng bán lại.
+    *   *Nếu hàng hỏng / ly đã in logo riêng (DAMAGED):* Đem đi vứt (Tạo phiếu Scrap - Hủy hàng). Ly in logo công ty người ta rồi thì không bán cho ai khác được nữa.
