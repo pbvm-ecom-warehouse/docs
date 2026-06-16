@@ -24,12 +24,11 @@ inventory_stocks               product_variants
 goods_receipts                 categories
 goods_issues                   designs
 print_jobs                     orders
-stock_transfers                customers
-stock_counts                   carts
-suppliers                      payment_transactions
-supplier_items                 customer_refresh_tokens
-carriers                       customer_auth_tokens
-shipments
+stock_counts                   customers
+suppliers                      carts
+supplier_items                 payment_transactions
+carriers                       customer_refresh_tokens
+shipments                      customer_auth_tokens
 users                          admin_users
 user_refresh_tokens            admin_refresh_tokens
 (module Auth-WMS: users + token) (module Auth-Ecom: customers + admin + token)
@@ -55,7 +54,7 @@ user_refresh_tokens            admin_refresh_tokens
 | Nhóm collection | Trường audit |
 |---|---|
 | **Master / catalog / config** — `warehouses` `zones` `racks` `shelves` `warehouse_items` `suppliers` `supplier_items` `carriers` `users` `categories` `products` `product_variants` `designs` `customers` | `createdBy`, `updatedBy`, `createdAt`, `updatedAt`, `deletedAt` (**soft-delete**) |
-| **Chứng từ giao dịch** — PO, GRN, PutAway, PrintJob, GoodsIssue, StockCount, StockTransfer, ScrapNote, GoodsReturn, `shipments`, `orders`, `carts` | `createdAt`, `updatedAt` + người tạo/duyệt (`createdBy`/`approvedBy`/… nêu trong bảng). **Hủy bằng `status`, KHÔNG soft-delete** |
+| **Chứng từ giao dịch** — PO, GRN, PutAway, PrintJob, GoodsIssue, StockCount, ScrapNote, GoodsReturn, `shipments`, `orders`, `carts` | `createdAt`, `updatedAt` + người tạo/duyệt (`createdBy`/`approvedBy`/… nêu trong bảng). **Hủy bằng `status`, KHÔNG soft-delete** |
 | **Sổ cái append-only** — `stock_movements`, `payment_transactions` | **chỉ** `createdAt` + `createdBy` — **BẤT BIẾN**, không `updatedAt`/`deletedAt` |
 | **Bảng dòng `*Item`** — PurchaseOrderItem, GoodsIssueItem, OrderItem… | **không** mang audit — kế thừa từ chứng từ cha |
 | **Snapshot tồn** — `stock_balances`, `inventory_stocks` | `updatedAt` |
@@ -86,13 +85,13 @@ type: CUP_BLANK                images: ["img1.jpg", "img2.jpg"]
 
 Ecommerce không đọc tồn của WMS. WMS push event mỗi khi **`available` đổi** (`available = StockBalance.onHand − reserved − expired`) → Ecommerce tự cập nhật `availableQty` trong domain của mình. *(Lô hết hạn rơi vào `expired` → tự loại khỏi hàng bán.)*
 
-> **`availableQty` là tổng gộp mọi kho** của một SKU (`Σ available` trên các kho). Ecommerce không phân biệt kho khi bán; việc chọn kho xuất xảy ra lúc chốt đơn (xem [Chống oversell](#chống-oversell-khi-xác-nhận-đơn)). Chuyển kho bắn **2 event lệch dấu** (delta− khi reserve kho nguồn lúc `CONFIRMED`, delta+ khi nhận kho đích `TRANSFER_IN`) → `available` **giảm tạm trong lúc transit**, net trọn vòng = 0.
+> **`availableQty` = `available` của kho trung tâm** (hệ chỉ vận hành 1 kho). Ecommerce bán theo con số này; tồn được giữ atomic lúc chốt đơn (xem [Chống oversell](#chống-oversell-khi-xác-nhận-đơn)).
 
 ### Luồng sync
 
 `availableQty` (bản copy bên Ecom) có **2 đường cập nhật**, không trùng đếm:
 
-**Đường 1 — biến động phía WMS** (GRN, kiểm kho, chuyển kho, in-vào-kho, hết hạn): WMS phát `stock.changed`/`stock.expired`, Ecom worker cộng dồn.
+**Đường 1 — biến động phía WMS** (GRN, kiểm kho, in-vào-kho, hết hạn): WMS phát `stock.changed`/`stock.expired`, Ecom worker cộng dồn.
 
 ```
 WMS nhập kho 200 ly (onHand += 200 → available += 200)
@@ -134,13 +133,13 @@ export class StockProcessor {
 
 | Event | Từ | Đến | Khi nào |
 |---|---|---|---|
-| `stock.changed` | WMS | Ecommerce | **Khi `available` (tổng gộp mọi kho) đổi do biến động phía WMS**: nhập kho (GRN), kiểm kho điều chỉnh, chuyển kho (reserve nguồn lúc `CONFIRMED` −/nhận đích +), in ly (blank↓ khi tạo lệnh; printed↑ **chỉ khi in vào kho, không gắn đơn**), hoàn hàng. *(KHÔNG bắn khi: put-away, pick-xuất, **scrap**; **cũng KHÔNG bắn cho reserve/release lúc checkout/hủy đơn** — Ecom tự trừ/cộng `availableQty` ngay trong transaction, xem [Chống oversell](#chống-oversell-khi-xác-nhận-đơn))* |
+| `stock.changed` | WMS | Ecommerce | **Khi `available` đổi do biến động phía WMS**: nhập kho (GRN), kiểm kho điều chỉnh, in ly (blank↓ khi tạo lệnh; printed↑ **chỉ khi in vào kho, không gắn đơn**), hoàn hàng. *(KHÔNG bắn khi: put-away, pick-xuất, **scrap**; **cũng KHÔNG bắn cho reserve/release lúc checkout/hủy đơn** — Ecom tự trừ/cộng `availableQty` ngay trong transaction, xem [Chống oversell](#chống-oversell-khi-xác-nhận-đơn))* |
 | `order.placed` | Ecommerce | WMS | **Khách chốt đơn (cả COD/online)** → **thông báo thuần** để WMS ghi nhận đơn. **KHÔNG reserve ở đây** — tồn đã giữ atomic ngay trong transaction checkout (Ecom ghi thẳng `wms_db.stock_balances`, xem [Chống oversell](#chống-oversell-khi-xác-nhận-đơn)). Trigger xuất kho là `order.ready_to_fulfill` |
 | `print.requested` | Ecommerce | WMS | `payment.success` & đơn có ly-in → WMS mở PrintJob (UC-04) cho từng ly-in (make-to-order chỉ chạy sau khi đã trả) |
 | `order.cancelled` | Ecommerce | WMS | Hủy đơn trước khi xuất → **thông báo thuần**; release reserve (`reserved −= qty`) + `availableQty += qty` đã do Ecom làm atomic trong transaction hủy. WMS ghi nhận để dừng downstream |
 | `order.returned` | Ecommerce | WMS | Khách trả hàng → WMS mở phiếu hoàn (UC-09), nhập lại hàng tốt |
 | `print.completed` | WMS | Ecommerce | PrintJob của đơn in xong → Ecom set `OrderItem.printJobId`; đã in xong **mọi** ly-in của đơn → lật `fulfillmentStatus: AWAITING_PRINT → READY_TO_PICK` |
-| `order.ready_to_fulfill` | Ecommerce | WMS | Đơn vào `READY_TO_PICK` (COD ngay sau checkout / online-không-in khi `payment.success` / đơn ly-in sau khi in xong) → WMS sinh `GoodsIssue` (UC-05) xuất từ `fulfillWarehouseId`. **Payload mang theo** `shippingAddress` + `recipient{name,phone}` + `paymentMethod` + `codAmount` để WMS dựng `Shipment` (WMS không đọc `ecom_db`) |
+| `order.ready_to_fulfill` | Ecommerce | WMS | Đơn vào `READY_TO_PICK` (COD ngay sau checkout / online-không-in khi `payment.success` / đơn ly-in sau khi in xong) → WMS sinh `GoodsIssue` (UC-05) xuất từ kho trung tâm. **Payload mang theo** `shippingAddress` + `recipient{name,phone}` + `paymentMethod` + `codAmount` để WMS dựng `Shipment` (WMS không đọc `ecom_db`) |
 | `goods.issued` | WMS | Ecommerce | Xuất kho xong → cập nhật trạng thái đơn *(không trừ available lần nữa — đã trừ lúc chốt đơn)* |
 | `shipment.shipped` | WMS | Ecommerce | Vận đơn đã bàn giao hãng (`IN_TRANSIT`) → `fulfillmentStatus: ISSUED → SHIPPED` |
 | `shipment.delivered` | WMS | Ecommerce | Giao thành công → `fulfillmentStatus → DELIVERED`; COD → `paymentStatus = PAID`; `orderStatus → CLOSED` |
@@ -186,7 +185,7 @@ async validateStock(items: OrderItem[]) {
 
 Khi **chốt đơn**, phải giữ tồn **atomic** trên nguồn thật `wms_db.stock_balances` trong 1 transaction — vì cùng cluster nên làm được:
 
-Đặt hàng → chọn kho có available ≥ qty (ưu tiên CENTRAL) → mở transaction (xuyên 2 logical DB cùng cluster):
+Đặt hàng → mở transaction (xuyên 2 logical DB cùng cluster):
   1. wms_db.stock_balances: kiểm `onHand − reserved ≥ qty` rồi `reserved += qty` (atomic, khóa document)
   2. ecom_db.product_variants: `availableQty −= qty` (Ecom tự trừ bản copy của mình — không qua event)
   3. ecom_db.orders: tạo Order + OrderItem (snapshot)
@@ -198,7 +197,7 @@ Khi **chốt đơn**, phải giữ tồn **atomic** trên nguồn thật `wms_db
 
 > **Reserve tách khỏi thanh toán:** tồn được giữ ngay khi đặt (atomic trong transaction checkout — `order.placed` chỉ là thông báo thuần), áp dụng cho cả COD và online. Thanh toán (`payment.success`) chỉ dùng để **xác nhận đơn online** và **mở lệnh in** cho đơn ly-in (`print.requested`). Đơn online quá hạn chưa trả → tự `order.cancelled` (release reserve).
 
-### Phân bổ kho khi chốt đơn (chưa hỗ trợ split đa kho)
+### Phân bổ kho khi chốt đơn
 
-- Đơn được giữ tồn ở **một kho duy nhất** có `available ≥ qty` (ưu tiên `CENTRAL`). Kho được chọn phải **lưu lại trên đơn** (vd `order.fulfillWarehouseId`) để GoodsIssue (UC-05) xuất đúng kho đã giữ.
-- **Chưa hỗ trợ split đa kho:** nếu không kho đơn lẻ nào đủ hàng — dù **tổng** mọi kho đủ — đơn bị **từ chối** (báo hết hàng). Khi cần đáp ứng đơn vượt tồn 1 kho, dùng [Chuyển kho (UC-07)](../warehouse/use-cases.md#uc-07-chuyển-kho-stock-transfer) gom hàng về một kho trước.
+- Hệ chỉ vận hành **1 kho duy nhất** (kho trung tâm) → không có bước chọn/phân bổ kho. Mọi đơn giữ tồn và xuất từ kho đó. GoodsIssue (UC-05) luôn xuất từ kho trung tâm.
+- Đủ tồn ở kho → giữ; không đủ → từ chối (báo hết hàng).

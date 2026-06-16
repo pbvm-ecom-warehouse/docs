@@ -51,7 +51,7 @@
 ## Cấu trúc kho
 
 ```
-Warehouse (Kho trung tâm / Kho phụ)
+Warehouse (Kho trung tâm — 1 kho duy nhất)
   └── Zone (Khu vực: A, B, C...)
         └── Rack (Kệ: A1, A2...)
               └── Shelf (Tầng: 1, 2, 3...)
@@ -64,9 +64,9 @@ Warehouse (Kho trung tâm / Kho phụ)
 | Role     | Quyền hạn                                                           |
 | -------- | ------------------------------------------------------------------- |
 | ADMIN        | (`wms_db.users`) Toàn quyền WMS, bypass mọi guard                  |
-| MANAGER      | (`wms_db.users`) Tạo/duyệt phiếu nhập-xuất, lệnh in, kiểm kho, chuyển kho |
-| RECEIVER     | (`wms_db.users`) Nhận hàng (GRN), put-away, nhận hàng chuyển kho   |
-| PICKER       | (`wms_db.users`) Soạn & xuất hàng, xuất hàng chuyển kho            |
+| MANAGER      | (`wms_db.users`) Tạo/duyệt phiếu nhập-xuất, lệnh in, kiểm kho      |
+| RECEIVER     | (`wms_db.users`) Nhận hàng (GRN), put-away                         |
+| PICKER       | (`wms_db.users`) Soạn & xuất hàng                                  |
 | PRINTER      | (`wms_db.users`) Vận hành in, xác nhận in xong                     |
 | COUNTER      | (`wms_db.users`) Kiểm đếm tồn thực tế                              |
 | ECOM_MANAGER | (`ecom_db.admin_users`) Set giá, CRUD catalog, xem/can thiệp đơn — **auth riêng Ecom** |

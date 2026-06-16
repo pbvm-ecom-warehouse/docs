@@ -90,11 +90,11 @@ KHÁCH                  CHECKOUT (order)            WMS (stock_balances)
  |                          |                          |
  |-- Địa chỉ + PTTT ------->| Chặn: ly-in + COD → từ chối
  |   (COD/ONLINE)           |-- validateStock (copy) ->|
- |                          |-- reserve ATOMIC ------->| reserved += qty (ưu tiên CENTRAL)
+ |                          |-- reserve ATOMIC ------->| reserved += qty (kho trung tâm)
  |                          |<-- OK / hết hàng --------|
  |                    Transaction atomic (xuyên 2 DB):
  |                      reserved += qty (wms_db) · availableQty −= qty (ecom_db) · tạo Order{PLACED,UNPAID,NONE}
- |                    fulfillWarehouseId; order.placed ──────>| (thông báo thuần, KHÔNG reserve lại)
+ |                    order.placed ──────>| (thông báo thuần, KHÔNG reserve lại)
  |<-- Đơn đã tạo -----------|
 ```
 > Checkout **tự** reserve atomic xuyên 2 DB (reserve `wms_db` + trừ `availableQty` `ecom_db`) trong 1 transaction — `order.placed` là **thông báo thuần**, KHÔNG reserve lại. Reserve **tách khỏi thanh toán**, giữ tồn ngay khi đặt. Fail → rollback, không tạo đơn. [WF-E01](../order/workflow.md#wf-e01-checkout--giữ-tồn).
@@ -169,7 +169,7 @@ WMS / SHIPPING           ORDER                    KHÁCH
   → Ly-in custom không nhận hoàn trừ khi lỗi/hỏng.
 
 [Vận hành kho nền] (chạy độc lập, đều phát stock.changed → sync availableQty)
-  Kiểm kho (WF-04) · Chuyển kho (WF-05) · Lô hết hạn → stock.expired → scrap (UC-08)
+  Kiểm kho (WF-04) · Lô hết hạn → stock.expired → scrap (UC-08)
 ```
 
 ---
@@ -199,7 +199,7 @@ WMS / SHIPPING           ORDER                    KHÁCH
 ## 5. Vòng đồng bộ tồn (luôn chạy nền)
 
 ```
-WMS biến động available phía kho (GRN, kiểm kho, chuyển kho, in ly, hết hạn)
+WMS biến động available phía kho (GRN, kiểm kho, in ly, hết hạn)
         │  stock.changed{sku, delta} / stock.expired
         │  (reserve/hủy lúc checkout do Ecom tự cập nhật in-transaction — không qua đây)
         ▼

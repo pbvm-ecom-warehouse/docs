@@ -33,7 +33,6 @@ Vận đơn — **1 đơn = 1 vận đơn** (xuất nguyên kiện, không tách
 | `_id` | ObjectId | |
 | `orderId` | String / ObjectId | **Id tham chiếu** đơn Ecom — KHÔNG đọc chéo `ecom_db`, chỉ lưu để đối soát & đẩy event |
 | `goodsIssueId` | ObjectId | Phiếu xuất WMS (UC-05) — nguồn auto-sinh vận đơn |
-| `fulfillWarehouseId` | ObjectId | Kho xuất (1 kho/đơn) |
 | `carrierId` | ObjectId | Ref `carriers` — gán tay bởi nhân viên kho |
 | `trackingNumber` | String | Mã vận đơn hãng — nhập tay |
 | `shipmentStatus` | Enum | Xem [mục Enum bên dưới](#enum-shipmentstatus) |

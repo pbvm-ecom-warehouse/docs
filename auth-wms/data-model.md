@@ -23,7 +23,7 @@
 | createdAt | DateTime | |
 | updatedAt | DateTime | |
 
-> **Nhiều role/user:** RolesGuard cho qua nếu `roles` giao với `@Roles(...)` ≠ ∅; `ADMIN` bypass mọi guard. `MANAGER` phụ trách kho (PO, GRN, in, kiểm, chuyển kho). Back-office shop (catalog, đơn) dùng `ecom_db.admin_users` riêng — xem [auth-ecom/data-model](../auth-ecom/data-model.md).
+> **Nhiều role/user:** RolesGuard cho qua nếu `roles` giao với `@Roles(...)` ≠ ∅; `ADMIN` bypass mọi guard. `MANAGER` phụ trách kho (PO, GRN, in, kiểm). Back-office shop (catalog, đơn) dùng `ecom_db.admin_users` riêng — xem [auth-ecom/data-model](../auth-ecom/data-model.md).
 
 ## UserRefreshToken (`user_refresh_tokens`)
 

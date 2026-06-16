@@ -10,7 +10,6 @@
 | UC-04 | Lệnh in ly (Make-to-Order) | MANAGER + PRINTER | 🔄 Đang phân tích |
 | UC-05 | Xuất kho theo đơn hàng | PICKER | 🔄 Đang phân tích |
 | UC-06 | Kiểm kho & Điều chỉnh tồn | COUNTER + MANAGER | 🔄 Đang phân tích |
-| UC-07 | Chuyển kho (Stock Transfer) | MANAGER + PICKER + RECEIVER | 🔄 Đang phân tích |
 | UC-08 | Hủy hàng hết hạn/hỏng (Scrap) | COUNTER/RECEIVER đề xuất, MANAGER duyệt | 🔄 Đang phân tích |
 | UC-09 | Hoàn hàng (Return/RMA) | RECEIVER | 🔄 Đang phân tích |
 
@@ -121,7 +120,7 @@
 **Trigger:** Sự kiện `order.ready_to_fulfill` (Ecom→WMS) khi đơn vào `fulfillmentStatus = READY_TO_PICK`  
 **Áp dụng cho:** Tất cả loại hàng (MATERIAL, CUP_BLANK, CUP_PRINTED, PACKAGING)
 
-> Tồn đã được **giữ (`reserved`) từ lúc khách đặt** (atomic trong transaction checkout, không phải qua event) ở kho được phân bổ (ưu tiên CENTRAL); phiếu xuất chỉ sinh khi đơn vào `fulfillmentStatus = READY_TO_PICK` (Ecom phát `order.ready_to_fulfill`) — với đơn ly-in là sau khi in xong mọi ly-in, không chỉ khi `CONFIRMED`. Khâu này chỉ hiện thực hóa: lấy hàng & trừ tồn thật. *(Với ly-in make-to-order, hold đã **chuyển sang CUP_PRINTED** sau khi in xong (UC-04) → UC-05 xử lý đồng nhất qua `reserved`.)*
+> Tồn đã được **giữ (`reserved`) từ lúc khách đặt** (atomic trong transaction checkout, không phải qua event) ở kho trung tâm; phiếu xuất chỉ sinh khi đơn vào `fulfillmentStatus = READY_TO_PICK` (Ecom phát `order.ready_to_fulfill`) — với đơn ly-in là sau khi in xong mọi ly-in, không chỉ khi `CONFIRMED`. Khâu này chỉ hiện thực hóa: lấy hàng & trừ tồn thật. *(Với ly-in make-to-order, hold đã **chuyển sang CUP_PRINTED** sau khi in xong (UC-04) → UC-05 xử lý đồng nhất qua `reserved`.)*
 
 ### Luồng chính
 
@@ -149,33 +148,6 @@
 3. Hệ thống so sánh: **tồn thực tế vs tồn hệ thống** → hiển thị chênh lệch
 4. MANAGER duyệt điều chỉnh + ghi lý do *(hư hỏng, mất mát, nhập nhầm...)*
 5. Hệ thống cập nhật tồn kho theo số thực tế
-
----
-
-## UC-07: Chuyển kho (Stock Transfer)
-
-**Actor:** MANAGER tạo/duyệt, PICKER xuất tại nguồn, RECEIVER nhận tại đích  
-**Áp dụng:** Mọi chiều — Trung tâm ↔ Phụ, Phụ ↔ Phụ
-
-### Luồng chính
-
-1. MANAGER tạo lệnh chuyển kho — chọn kho nguồn, kho đích, danh sách hàng + số lượng
-2. Hệ thống kiểm tra tồn kho nguồn đủ không → MANAGER xác nhận (`CONFIRMED`) → **reserve tại kho nguồn** (`reserved += qty`) để không bán phần chờ chuyển *(available nguồn giảm → bắn `stock.changed` delta−)*
-3. PICKER chuẩn bị hàng tại kho nguồn → xác nhận xuất → `onHand−=, reserved−=` tại nguồn (`TRANSFER_OUT`), Transfer → `IN_TRANSIT` *(available không đổi ở bước này — đã giảm từ lúc reserve)*
-4. RECEIVER xác nhận hàng đến kho đích → chỉ định vị trí (Zone/Rack/Shelf) → `onHand+=` tại đích (`TRANSFER_IN`), Transfer → `COMPLETED` *(available đích tăng → bắn `stock.changed` delta+)*
-5. MANAGER duyệt hoàn tất
-
-> **Tồn trong lúc transit:** `available` tổng (gộp mọi kho) **giảm tạm** từ lúc reserve nguồn (`CONFIRMED`) đến khi nhận đích (`TRANSFER_IN`) — phản ánh đúng việc hàng đang trên đường, chưa giao ngay được. Trọn vòng (OUT + IN) net = 0.
-
-### Trạng thái Transfer
-
-| Status | Mô tả |
-|---|---|
-| `DRAFT` | Đang soạn |
-| `CONFIRMED` | MANAGER xác nhận lệnh |
-| `IN_TRANSIT` | Hàng đang trên đường chuyển |
-| `COMPLETED` | Đã nhận tại kho đích |
-| `CANCELLED` | Hủy lệnh chuyển |
 
 ---
 

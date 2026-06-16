@@ -6,8 +6,8 @@
 // 2 logical DB (1 MongoDB cluster):
 //   - wms_db   : warehouse / supplier / shipping / auth-wms
 //   - ecom_db  : catalog / order / auth-ecom
-// Liên kết XUYÊN 2 app DUY NHẤT qua `sku` + id tham chiếu (orderId/printJobId/
-// fulfillWarehouseId) — không đọc chéo collection; giao tiếp qua event (BullMQ+Redis).
+// Liên kết XUYÊN 2 app DUY NHẤT qua `sku` + id tham chiếu (orderId/printJobId)
+// — không đọc chéo collection; giao tiếp qua event (BullMQ+Redis).
 // (Các Ref xuyên app ở cuối file được đánh dấu "CROSS-APP".)
 //
 // ----- QUY ƯỚC AUDIT -----
@@ -21,10 +21,6 @@
 
 // ========================= ENUMS =========================
 // DBML: mỗi giá trị enum nằm trên 1 dòng riêng — KHÔNG dùng dấu `;`
-Enum warehouse_type {
-  CENTRAL
-  SUB
-}
 Enum item_type {
   MATERIAL
   CUP_BLANK
@@ -39,8 +35,6 @@ Enum movement_type {
   RECEIVE
   PUTAWAY
   ISSUE
-  TRANSFER_OUT
-  TRANSFER_IN
   ADJUST
   SCRAP
   PRINT_CONSUME
@@ -78,13 +72,6 @@ Enum stockcount_status {
   IN_PROGRESS
   COMPLETED
   APPROVED
-}
-Enum stocktransfer_status {
-  DRAFT
-  CONFIRMED
-  IN_TRANSIT
-  COMPLETED
-  CANCELLED
 }
 Enum scrapnote_status {
   DRAFT
@@ -191,9 +178,8 @@ Enum authtoken_type {
 Table warehouses {
   id ObjectId [pk]
   name String
-  type warehouse_type
   address String
-  isActive Boolean
+  isActive Boolean [note: 'Hệ chỉ có 1 kho — kho trung tâm']
   createdBy ObjectId [note: '→ users.id']
   updatedBy ObjectId [note: '→ users.id']
   createdAt DateTime
@@ -446,29 +432,6 @@ Table stock_count_items {
   reason String
 }
 
-Table stock_transfers {
-  id ObjectId [pk]
-  fromWarehouseId ObjectId [ref: > warehouses.id]
-  toWarehouseId ObjectId [ref: > warehouses.id]
-  transferDate DateTime
-  status stocktransfer_status
-  note String
-  createdBy ObjectId [note: '→ users.id (MANAGER)']
-  approvedBy ObjectId [note: '→ users.id (MANAGER)']
-  createdAt DateTime
-  updatedAt DateTime
-}
-
-Table stock_transfer_items {
-  id ObjectId [pk]
-  stockTransferId ObjectId [ref: > stock_transfers.id]
-  itemId ObjectId [ref: > warehouse_items.id]
-  lotId ObjectId [ref: > lots.id]
-  quantity Number
-  fromShelfId ObjectId [ref: > shelves.id]
-  toShelfId ObjectId [ref: > shelves.id]
-}
-
 Table scrap_notes {
   id ObjectId [pk]
   warehouseId ObjectId [ref: > warehouses.id]
@@ -566,7 +529,6 @@ Table shipments {
   id ObjectId [pk]
   orderId ObjectId [note: 'CROSS-APP ref → ecom orders.id']
   goodsIssueId ObjectId [ref: - goods_issues.id, note: '1 đơn = 1 vận đơn']
-  fulfillWarehouseId ObjectId [ref: > warehouses.id]
   carrierId ObjectId [ref: > carriers.id]
   trackingNumber String
   shipmentStatus shipment_status
@@ -703,7 +665,6 @@ Table orders {
   paymentStatus payment_status
   orderStatus order_status
   fulfillmentStatus fulfillment_status
-  fulfillWarehouseId ObjectId [note: 'CROSS-APP ref → wms warehouses.id (1 kho/đơn)']
   hasPrintItems Boolean
   paymentDeadline DateTime
   cancelReason String
@@ -785,7 +746,6 @@ Table customer_auth_tokens {
 // Ref: goods_issues.orderId > orders.id
 // Ref: goods_returns.orderId > orders.id
 // Ref: shipments.orderId > orders.id
-// Ref: orders.fulfillWarehouseId > warehouses.id
 // Ref: order_items.printJobId > print_jobs.id
 
 // ========================= GROUPS =========================
@@ -811,8 +771,6 @@ TableGroup "WMS · warehouse" {
   goods_issue_items
   stock_counts
   stock_count_items
-  stock_transfers
-  stock_transfer_items
   scrap_notes
   scrap_note_items
   goods_returns

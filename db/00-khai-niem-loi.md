@@ -33,10 +33,10 @@ available = onHand − reserved − expired      ← số đẩy sang Ecom hiể
 - **Lớp 2 — `inventory_stocks`** (theo shelf + lô): biết **hàng nằm đâu** mà đi lấy.
 - **Bất biến:** mọi biến động cập nhật **cả 2 lớp trong cùng 1 transaction**, nếu không 2 lớp lệch nhau.
 
-Ví dụ 200 ly ở kho CENTRAL, nằm 2 shelf:
+Ví dụ 200 ly ở kho trung tâm, nằm 2 shelf:
 
 ```
-stock_balances:  {sku: LY-500, kho: CENTRAL, onHand: 200, reserved: 0, expired: 0}
+stock_balances:  {sku: LY-500, onHand: 200, reserved: 0, expired: 0}
 inventory_stocks: {shelf: A1-T2, qty: 120}  +  {shelf: A1-T3, qty: 80}   → Σ = 200 ✓
 ```
 

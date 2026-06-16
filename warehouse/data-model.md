@@ -16,9 +16,10 @@ Warehouse → Zone → Rack → Shelf
 |---|---|---|
 | id | ObjectId | |
 | name | String | Tên kho |
-| type | Enum | `CENTRAL` / `SUB` |
 | address | String | Địa chỉ |
 | isActive | Boolean | |
+
+> **Hệ chỉ vận hành 1 kho duy nhất** (kho trung tâm). `warehouses` giữ đúng 1 document — cấu trúc bảng được giữ để dễ mở rộng đa kho sau này mà không phải migrate. Không có khái niệm kho phụ / chuyển kho / phân bổ kho.
 
 ### Zone (Khu vực trong kho)
 
@@ -123,7 +124,7 @@ Warehouse → Zone → Rack → Shelf
 | itemId | ObjectId | WarehouseItem (SKU) |
 | warehouseId | ObjectId | Kho |
 | onHand | Number | Tổng vật lý đang có (gồm cả hàng chưa put-away ở staging) |
-| reserved | Number | Đã giữ cho đơn / print job / chuyển kho (giữ tại kho nguồn khi `CONFIRMED`), chưa xuất |
+| reserved | Number | Đã giữ cho đơn / print job, chưa xuất |
 | expired | Number | Tồn thuộc lô **đã hết hạn** — còn vật lý nhưng không bán được, chờ scrap |
 | minQuantity | Number | Ngưỡng cảnh báo tồn thấp → phát `stock.low` khi `available < minQuantity` |
 
@@ -133,7 +134,7 @@ Warehouse → Zone → Rack → Shelf
 
 ### InventoryStock (Lớp 2 — tồn theo vị trí)
 
-> Cho biết hàng **nằm shelf nào** để cất/lấy thực tế. Một WarehouseItem có thể nằm ở nhiều shelf / nhiều kho. Shelf `isStaging` chứa hàng vừa nhận, chưa put-away.
+> Cho biết hàng **nằm shelf nào** để cất/lấy thực tế. Một WarehouseItem có thể nằm ở nhiều shelf. Shelf `isStaging` chứa hàng vừa nhận, chưa put-away.
 
 | Field | Type | Mô tả |
 |---|---|---|
@@ -168,9 +169,9 @@ Warehouse → Zone → Rack → Shelf
 | warehouseId | ObjectId | Kho |
 | shelfId | ObjectId | Vị trí shelf của bút toán (mọi `type` đều gắn shelf). *(Reserve/release KHÔNG ghi vào sổ này — chỉ đổi `StockBalance.reserved`, không đổi onHand/vị trí)* |
 | lotId | ObjectId | Lô (null nếu không theo lô) |
-| type | Enum | `RECEIVE` / `PUTAWAY` / `ISSUE` / `TRANSFER_OUT` / `TRANSFER_IN` / `ADJUST` / `SCRAP` / `PRINT_CONSUME` / `PRINT_OUTPUT` |
+| type | Enum | `RECEIVE` / `PUTAWAY` / `ISSUE` / `ADJUST` / `SCRAP` / `PRINT_CONSUME` / `PRINT_OUTPUT` |
 | quantity | Number | Số lượng **có dấu** (+ nhập / − xuất) |
-| refType | String | Loại chứng từ nguồn: `GRN` / `PutAway` / `GoodsIssue` / `StockTransfer` / `StockCount` / `ScrapNote` / `PrintJob` / `GoodsReturn` |
+| refType | String | Loại chứng từ nguồn: `GRN` / `PutAway` / `GoodsIssue` / `StockCount` / `ScrapNote` / `PrintJob` / `GoodsReturn` |
 | refId | ObjectId | ID chứng từ nguồn |
 | createdBy | ObjectId | Người thao tác |
 | createdAt | DateTime | Thời điểm (bất biến) |
@@ -179,7 +180,6 @@ Warehouse → Zone → Rack → Shelf
 
 > **Giao dịch đổi chỗ sinh 2 bút toán** (cùng `refId`, lệch dấu — đối soát onHand net = 0, nhưng InventoryStock 2 shelf đều đúng):
 > - **Put-away:** `PUTAWAY −qty` tại shelf staging + `PUTAWAY +qty` tại shelf thật.
-> - **Chuyển kho:** `TRANSFER_OUT −qty` (shelf kho nguồn) + `TRANSFER_IN +qty` (shelf kho đích). *(available tổng giảm tạm lúc transit — bắn `stock.changed` delta− khi reserve nguồn lúc CONFIRMED, delta+ khi nhận đích; net trọn vòng = 0.)*
 > Đối soát **lớp 2** theo từng shelf: `InventoryStock.quantity = Σ StockMovement.quantity` lọc theo `itemId + shelfId (+ lotId)`.
 
 ---
@@ -306,7 +306,7 @@ Warehouse → Zone → Rack → Shelf
 |---|---|---|
 | id | ObjectId | |
 | orderId | ObjectId | Đơn hàng |
-| warehouseId | ObjectId | Kho xuất — **phải = kho đã giữ tồn lúc chốt đơn** (`order.fulfillWarehouseId`, xem [data-ownership](../overview/data-ownership.md#phân-bổ-kho-khi-chốt-đơn-chưa-hỗ-trợ-split-đa-kho)) |
+| warehouseId | ObjectId | Kho xuất — kho trung tâm duy nhất |
 | issueDate | DateTime | |
 | status | Enum | `DRAFT` / `CONFIRMED` |
 | note | String | |
@@ -355,31 +355,6 @@ Warehouse → Zone → Rack → Shelf
 | reason | String | Lý do chênh lệch |
 
 ---
-
-### StockTransfer (Lệnh chuyển kho — UC-07)
-
-| Field | Type | Mô tả |
-|---|---|---|
-| id | ObjectId | |
-| fromWarehouseId | ObjectId | Kho nguồn |
-| toWarehouseId | ObjectId | Kho đích |
-| transferDate | DateTime | |
-| status | Enum | `DRAFT` / `CONFIRMED` / `IN_TRANSIT` / `COMPLETED` / `CANCELLED` |
-| note | String | |
-| createdBy | ObjectId | MANAGER |
-| approvedBy | ObjectId | MANAGER |
-
-### StockTransferItem
-
-| Field | Type | Mô tả |
-|---|---|---|
-| id | ObjectId | |
-| stockTransferId | ObjectId | |
-| itemId | ObjectId | |
-| lotId | ObjectId | Lô được chuyển (null nếu không `isPerishable`) |
-| quantity | Number | |
-| fromShelfId | ObjectId | Lấy từ shelf nào |
-| toShelfId | ObjectId | Đặt vào shelf nào tại kho đích |
 
 ---
 

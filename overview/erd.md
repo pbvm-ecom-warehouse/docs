@@ -5,7 +5,7 @@
 **Quy ước đọc sơ đồ:**
 
 - **Nét liền** `||--o{` = quan hệ trong **cùng một app/DB** (khóa ngoại `ObjectId` thật).
-- **Nét đứt** `||..o{` = liên kết **xuyên 2 app** — chỉ qua `sku` hoặc id tham chiếu (`orderId`/`printJobId`/`fulfillWarehouseId`), **không đọc chéo collection** (xem [data-ownership](data-ownership.md)).
+- **Nét đứt** `||..o{` = liên kết **xuyên 2 app** — chỉ qua `sku` hoặc id tham chiếu (`orderId`/`printJobId`), **không đọc chéo collection** (xem [data-ownership](data-ownership.md)).
 - 2 logical DB: **`wms_db`** (WMS — warehouse / supplier / shipping / auth-wms) và **`ecom_db`** (Ecommerce — catalog / order / auth-ecom).
 
 ```mermaid
@@ -56,8 +56,6 @@ erDiagram
     Zone ||--o{ StockCount : ""
     StockCount ||--o{ StockCountItem : ""
     WarehouseItem ||--o{ StockCountItem : ""
-    StockTransfer ||--o{ StockTransferItem : "chuyển kho"
-    WarehouseItem ||--o{ StockTransferItem : ""
     Warehouse ||--o{ ScrapNote : "hủy hàng"
     ScrapNote ||--o{ ScrapNoteItem : ""
     WarehouseItem ||--o{ ScrapNoteItem : ""
@@ -100,7 +98,6 @@ erDiagram
 
     %% ===================== Liên kết XUYÊN 2 APP (nét đứt) =====================
     WarehouseItem ||..o{ ProductVariant : "sku (link DUY NHẤT 2 app)"
-    Warehouse ||..o{ Order : "fulfillWarehouseId"
     Order ||..o{ PrintJob : "orderId"
     Order ||..o| GoodsIssue : "orderId"
     Order ||..o| GoodsReturn : "orderId"
@@ -113,8 +110,7 @@ erDiagram
     Warehouse {
         ObjectId id PK
         String name
-        Enum type "CENTRAL / SUB"
-        Boolean isActive
+        Boolean isActive "1 kho duy nhất — kho trung tâm"
     }
     Zone {
         ObjectId id PK
@@ -262,20 +258,6 @@ erDiagram
         Number actualQty
         Number delta
     }
-    StockTransfer {
-        ObjectId id PK
-        ObjectId fromWarehouseId FK
-        ObjectId toWarehouseId FK
-        Enum status "DRAFT..COMPLETED"
-    }
-    StockTransferItem {
-        ObjectId id PK
-        ObjectId stockTransferId FK
-        ObjectId itemId FK
-        ObjectId fromShelfId FK
-        ObjectId toShelfId FK
-        Number quantity
-    }
     ScrapNote {
         ObjectId id PK
         ObjectId warehouseId FK
@@ -396,7 +378,6 @@ erDiagram
         ObjectId id PK
         String code UK
         ObjectId customerId FK
-        ObjectId fulfillWarehouseId "ref WMS"
         Enum paymentMethod "COD/ONLINE"
         Enum paymentStatus "UNPAID/PAID/REFUND_PENDING/REFUNDED"
         Enum orderStatus "PLACED/CONFIRMED/CANCELLED/CLOSED"
@@ -449,7 +430,7 @@ erDiagram
 
 | App / DB | Module | Collection chính |
 |---|---|---|
-| WMS `wms_db` | warehouse | `warehouse_items`, `stock_balances`, `inventory_stocks`, `lots`, `stock_movements`, `warehouses`/`zones`/`racks`/`shelves`, các phiếu PO/GRN/PutAway/PrintJob/GoodsIssue/StockCount/StockTransfer/ScrapNote/GoodsReturn |
+| WMS `wms_db` | warehouse | `warehouse_items`, `stock_balances`, `inventory_stocks`, `lots`, `stock_movements`, `warehouses`/`zones`/`racks`/`shelves`, các phiếu PO/GRN/PutAway/PrintJob/GoodsIssue/StockCount/ScrapNote/GoodsReturn |
 | WMS `wms_db` | supplier | `suppliers`, `supplier_items` |
 | WMS `wms_db` | shipping | `carriers`, `shipments` |
 | WMS `wms_db` | auth-wms | `users`, `user_refresh_tokens` |
@@ -457,4 +438,4 @@ erDiagram
 | Ecommerce `ecom_db` | order | `carts`, `orders`, `payment_transactions` |
 | Ecommerce `ecom_db` | auth-ecom | `customers` (+ `addresses` embedded), `customer_refresh_tokens`, `customer_auth_tokens` |
 
-> **3 liên kết xuyên app duy nhất** (nét đứt): (1) `WarehouseItem.sku ⟷ ProductVariant.sku` — đồng bộ tồn qua event; (2) `Order ⟷ PrintJob/GoodsIssue/GoodsReturn/Shipment` qua `orderId` (id tham chiếu); (3) `Order.fulfillWarehouseId ⟷ Warehouse`, `OrderItem.printJobId ⟷ PrintJob`. Mọi liên kết qua **event (BullMQ + Redis)**, không đọc chéo collection.
+> **Liên kết xuyên app duy nhất** (nét đứt): (1) `WarehouseItem.sku ⟷ ProductVariant.sku` — đồng bộ tồn qua event; (2) `Order ⟷ PrintJob/GoodsIssue/GoodsReturn/Shipment` qua `orderId` (id tham chiếu); (3) `OrderItem.printJobId ⟷ PrintJob`. Mọi liên kết qua **event (BullMQ + Redis)**, không đọc chéo collection.

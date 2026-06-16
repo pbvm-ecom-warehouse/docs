@@ -86,9 +86,9 @@ wms-ecom/
 | Role | Phụ trách |
 |---|---|
 | `ADMIN` | Toàn quyền, bypass mọi guard |
-| `MANAGER` | Tạo PO, tạo lệnh in/kiểm/chuyển, **duyệt** |
-| `RECEIVER` | Nhận hàng + put-away (GRN, put-away, nhận hàng chuyển kho) |
-| `PICKER` | Soạn & xuất hàng (xuất kho, xuất hàng chuyển kho) |
+| `MANAGER` | Tạo PO, tạo lệnh in/kiểm, **duyệt** |
+| `RECEIVER` | Nhận hàng + put-away (GRN, put-away) |
+| `PICKER` | Soạn & xuất hàng (xuất kho) |
 | `PRINTER` | Vận hành in (xác nhận in xong) |
 | `COUNTER` | Kiểm đếm tồn |
 

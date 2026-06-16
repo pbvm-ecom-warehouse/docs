@@ -12,10 +12,9 @@ Nhà cung cấp → [UC-01 PO] → [UC-02 GRN] → [UC-03 Put-away] → Kho
 Khách hàng  ←  [UC-05 Xuất kho]  ←  Kho
                                       ↕
                               [UC-06 Kiểm kho]
-                              [UC-07 Chuyển kho]
 ```
 
-> **Định danh bằng barcode:** ở các bước chạm hàng vật lý — nhận hàng (WF-01 GRN), put-away, xuất kho (WF-03), chuyển kho (WF-05) — thao tác chuẩn là **quét barcode SKU + quét barcode vị trí (shelf)** rồi mới xác nhận. Hệ tự khớp dòng chứng từ; quét sai item/vị trí hoặc lệch qty → cảnh báo.
+> **Định danh bằng barcode:** ở các bước chạm hàng vật lý — nhận hàng (WF-01 GRN), put-away, xuất kho (WF-03) — thao tác chuẩn là **quét barcode SKU + quét barcode vị trí (shelf)** rồi mới xác nhận. Hệ tự khớp dòng chứng từ; quét sai item/vị trí hoặc lệch qty → cảnh báo.
 
 > **Lô & hạn dùng (hàng `isPerishable`):** GRN nhập **lotNumber + expiryDate**; xuất kho gợi ý **FEFO** (lô hết hạn sớm nhất trước, cho ghi đè). Job định kỳ đánh dấu lô tới hạn → loại khỏi `available`, chờ **hủy hàng (UC-08 Scrap)**.
 
@@ -125,33 +124,3 @@ MANAGER                    COUNTER                   Hệ thống
    |   + ghi lý do            |                    StockCount → APPROVED
 ```
 
----
-
-## WF-05: Chuyển kho (UC-07)
-
-> Cột giữa gồm 2 role: **PICKER** xuất tại kho nguồn, **RECEIVER** nhận tại kho đích.
-
-```
-MANAGER                 PICKER / RECEIVER            Hệ thống
-   |                          |                           |
-   |-- Tạo lệnh chuyển kho -->|                    Kiểm tồn kho nguồn
-   |   (kho nguồn → đích,     |                    Nếu đủ: reserve nguồn
-   |    danh sách hàng)       |                    Transfer → CONFIRMED
-   |                          |                    (event delta−)
-   |                          |                           |
-   |             [PICKER]     |-- Chuẩn bị tại kho nguồn->|
-   |             [PICKER]     |-- Xác nhận xuất --------->|
-   |                          |                    onHand−, reserved− (OUT)
-   |                          |                    Transfer → IN_TRANSIT
-   |                          |                           |
-   |       [ Vận chuyển đến kho đích ]                    |
-   |                          |                           |
-   |           [RECEIVER]     |-- Xác nhận nhận tại đích->|
-   |           [RECEIVER]     |   Chỉ định vị trí         |
-   |                          |                    onHand+ kho đích (IN)
-   |                          |                    Transfer → COMPLETED
-   |                          |                    (event delta+)
-   |-- Duyệt hoàn tất ------->|                           |
-```
-
-> **Tồn lúc transit:** available tổng giảm tạm từ `CONFIRMED` (reserve nguồn, event delta−) đến khi nhận đích (`TRANSFER_IN`, event delta+); net trọn vòng = 0. Bước xuất nguồn (`TRANSFER_OUT`) chỉ đổi onHand/vị trí, available không đổi.

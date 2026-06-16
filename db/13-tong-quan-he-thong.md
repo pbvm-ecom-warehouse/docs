@@ -105,7 +105,6 @@ erDiagram
     Warehouse ||--o{ PrintJob : "thực hiện in"
     Warehouse ||--o{ GoodsIssue : "xuất từ kho"
     Warehouse ||--o{ StockCount : "kiểm kho"
-    Warehouse ||--o{ StockTransfer : "điều chuyển"
     Warehouse ||--o{ ScrapNote : "hủy hàng hỏng"
     Warehouse ||--o{ GoodsReturn : "nhận trả hàng"
 
@@ -126,7 +125,6 @@ erDiagram
 
     %% ===== Liên kết xuyên 2 app (nét đứt) =====
     WarehouseItem ||..o{ ProductVariant : "sku (Khóa đồng bộ tồn)"
-    Warehouse ||..o{ Order : "fulfillWarehouseId"
     Order ||..o{ PrintJob : "orderId"
     Order ||..o| GoodsIssue : "orderId"
     Order ||..o| GoodsReturn : "orderId"
@@ -141,7 +139,7 @@ erDiagram
 
 #### A. Cấu trúc kho vật lý (Warehouse Structure)
 
-- **Warehouses**: Quản lý thông tin kho. Phân loại `CENTRAL` (Kho trung tâm - ưu tiên điều phối hàng) và `SUB` (Kho phụ). (Xem [01 — Kho & vị trí](01-kho-va-vi-tri.md))
+- **Warehouses**: Quản lý thông tin kho. Hệ chỉ vận hành **1 kho duy nhất** (kho trung tâm) — bảng giữ 1 dòng, không có kho phụ. (Xem [01 — Kho & vị trí](01-kho-va-vi-tri.md))
 - **Zones $\rightarrow$ Racks $\rightarrow$ Shelves**: Tổ chức không gian lưu trữ theo cấu trúc hình cây.
   - `shelves` là ô/tầng kệ cụ thể và có lưu mã barcode (`code`). Đây là điểm quét thực tế của nhân viên kho.
   - Trường `isStaging` trong `shelves` đánh dấu đây là khu vực đệm nhận hàng (hàng vừa nhập từ xe tải, chưa xếp lên kệ).
@@ -179,7 +177,6 @@ Hệ thống hỗ trợ in ấn thiết kế riêng theo từng đơn hàng (`fu
 
 - **Goods_issues (+ items)**: Phiếu xuất hàng giao cho khách. Giảm `onHand` và `reserved` của kho, ghi movement `ISSUE -`. (Xem [05 — Xuất kho & nội bộ](05-xuat-kho-va-noi-bo.md))
 - **Stock_counts (+ items)**: Phiếu kiểm kê kho. Khi phê duyệt, ghi nhận chênh lệch qua movement `ADJUST ±delta` để đồng bộ lại số tồn hệ thống khớp thực tế.
-- **Stock_transfers (+ items)**: Phiếu chuyển kho nội bộ. Sinh 2 bút toán đối ứng `TRANSFER_OUT -` tại kho gửi và `TRANSFER_IN +` tại kho nhận.
 - **Scrap_notes (+ items)**: Phiếu thanh lý hàng hỏng/hết hạn. Giảm `onHand` (và giảm `expired` nếu là hàng hết hạn), ghi movement `SCRAP -`.
 - **Goods_returns (+ items)**: Phiếu nhận hàng hoàn trả từ khách hàng. Nếu kiểm tra hàng còn tốt (`condition = GOOD`), nhập lại kệ bán và tăng `onHand`, bắn event đồng bộ tồn lên Ecommerce. Nếu hỏng (`DAMAGED`), đưa sang phân khu chờ hủy (Scrap).
 
@@ -205,7 +202,7 @@ Hệ thống hỗ trợ in ấn thiết kế riêng theo từng đơn hàng (`fu
 #### B. Giỏ hàng & Đơn hàng (Cart & Order)
 
 - **Carts (+ items)**: Giỏ hàng tạm thời của khách hàng. Chưa thực hiện giữ tồn kho. (Xem [10 — Order](10-order.md))
-- **Orders (+ items)**: Đơn đặt hàng chính thức. Lưu thông tin thanh toán, địa chỉ nhận hàng và kho thực hiện đóng gói (`fulfillWarehouseId`).
+- **Orders (+ items)**: Đơn đặt hàng chính thức. Lưu thông tin thanh toán, địa chỉ nhận hàng. Hàng luôn xuất từ kho trung tâm duy nhất.
 - **Payment_transactions**: Sổ cái ghi nhận lịch sử thanh toán (Online, COD, Refund).
 
 #### C. Khách hàng (Customer Auth)
@@ -288,7 +285,7 @@ P7: Hoàn trả      (Nếu khách trả hàng - RMA) ────────�
 | **1** | **Khớp tồn hai lớp**             | Với mỗi SKU ở một kho nhất định, giá trị `stock_balances.onHand` phải luôn bằng tổng số lượng tồn chi tiết tại các vị trí kệ thuộc kho đó: `Σ inventory_stocks.quantity`.                                    |
 | **2** | **Khớp sổ cái thẻ kho**          | Giá trị `stock_balances.onHand` hiện tại phải bằng tổng tích lũy lịch sử các dòng biến động trong thẻ kho: `Σ stock_movements.quantity`.                                                                     |
 | **3** | **Không âm tồn khả dụng**        | Công thức tính: $\text{available} = \text{onHand} - \text{reserved} - \text{expired}$. Giá trị này phải luôn $\ge 0$.                                                                                        |
-| **4** | **Một đơn - Một kho - Một kiện** | Một đơn hàng (`order`) chỉ được xử lý giữ tồn tại duy nhất một kho (`fulfillWarehouseId`) và đi kèm với đúng một vận đơn vận chuyển (`shipment`). Hệ thống chưa hỗ trợ tách đơn giao từ nhiều kho.           |
+| **4** | **Một đơn - Một kiện**           | Hệ chỉ vận hành **1 kho duy nhất** (kho trung tâm); mọi đơn giữ tồn & xuất từ kho đó. Một đơn hàng (`order`) đi kèm đúng một vận đơn vận chuyển (`shipment`) — chưa hỗ trợ tách kiện/partial fulfillment.   |
 | **5** | **Khớp sổ cái tài chính**        | Trạng thái thanh toán của đơn hàng (`order.paymentStatus`) phải là kết quả tính toán trực tiếp từ tổng số tiền thu/chi thành công ghi nhận tại sổ cái: `payment_transactions` (CHARGE, REFUND, COD_COLLECT). |
 | **6** | **Chống bán vượt lúc đặt**       | Việc kiểm tra tồn khả dụng thực tế và cộng dồn lượng giữ hàng (`reserved += quantity`) phải được bọc trong một **Transaction duy nhất** khóa tài liệu (document-level lock) trên `wms_db.stock_balances`.    |
 

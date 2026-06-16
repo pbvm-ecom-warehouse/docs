@@ -28,7 +28,6 @@ erDiagram
     Warehouse ||--o{ PrintJob : ""
     Warehouse ||--o{ GoodsIssue : ""
     Warehouse ||--o{ StockCount : ""
-    Warehouse ||--o{ StockTransfer : ""
     Warehouse ||--o{ ScrapNote : ""
     Warehouse ||--o{ GoodsReturn : ""
 
@@ -49,7 +48,6 @@ erDiagram
 
     %% ===== Liên kết xuyên 2 app (nét đứt) =====
     WarehouseItem ||..o{ ProductVariant : "sku — link DUY NHẤT"
-    Warehouse ||..o{ Order : "fulfillWarehouseId"
     Order ||..o{ PrintJob : "orderId"
     Order ||..o| GoodsIssue : "orderId"
     Order ||..o| GoodsReturn : "orderId"
@@ -63,10 +61,10 @@ erDiagram
 | **WMS** `wms_db` | Cấu trúc kho | `Warehouse → Zone → Rack → Shelf` |
 | | Hàng & tồn | `WarehouseItem` · `StockBalance` (tổng) · `InventoryStock` (vị trí) · `Lot` · `StockMovement` (sổ cái) |
 | | Nhập | `Supplier → PurchaseOrder → GoodsReceiveNote → PutAwayTask` |
-| | Xuất / nội bộ | `PrintJob` · `GoodsIssue` · `StockCount` · `StockTransfer` · `ScrapNote` · `GoodsReturn` |
+| | Xuất / nội bộ | `PrintJob` · `GoodsIssue` · `StockCount` · `ScrapNote` · `GoodsReturn` |
 | | Giao hàng | `Carrier · Shipment` |
 | | Nhân sự | `User` |
 | **Ecommerce** `ecom_db` | Catalog | `Category → Product → ProductVariant` · `Design` |
 | | Đơn | `Customer → Cart` · `Customer → Order → PaymentTransaction` |
 
-> **3 cây cầu xuyên app (nét đứt):** `WarehouseItem.sku ⟷ ProductVariant.sku` (đồng bộ tồn) · `Order ⟷ PrintJob/GoodsIssue/GoodsReturn/Shipment` qua `orderId` · `Order.fulfillWarehouseId ⟷ Warehouse`. Tất cả qua **event (BullMQ + Redis)**, không đọc chéo collection.
+> **Cây cầu xuyên app (nét đứt):** `WarehouseItem.sku ⟷ ProductVariant.sku` (đồng bộ tồn) · `Order ⟷ PrintJob/GoodsIssue/GoodsReturn/Shipment` qua `orderId` · `OrderItem.printJobId ⟷ PrintJob`. Tất cả qua **event (BullMQ + Redis)**, không đọc chéo collection.

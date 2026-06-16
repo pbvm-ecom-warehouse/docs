@@ -28,7 +28,6 @@ Phần **mua & trả tiền** bên `ecom_db`. Đây là nơi diễn ra **chống
 | `subtotal`/`shippingFee`/`total` | Tiền (snapshot) |
 | `paymentMethod` | `COD` / `ONLINE` |
 | 3 trục: `paymentStatus`/`orderStatus`/`fulfillmentStatus` | Xem [khái niệm ⑤](00-khai-niem-loi.md) |
-| `fulfillWarehouseId` | **Kho đã giữ tồn** (1 kho/đơn, ưu tiên CENTRAL) |
 | `hasPrintItems` | Có ly-in → gate trả-trước |
 | `paymentDeadline` | Hạn trả online; quá hạn chưa PAID → tự hủy |
 
@@ -45,7 +44,7 @@ Phần **mua & trả tiền** bên `ecom_db`. Đây là nơi diễn ra **chống
 Khi **chốt đơn**, giữ tồn **atomic** trên nguồn thật `wms_db.stock_balances` trong **1 transaction** (cùng cluster nên xuyên 2 DB được):
 
 ```
-Đặt hàng → chọn kho có available ≥ qty (ưu tiên CENTRAL) → mở transaction:
+Đặt hàng → mở transaction:
   1. wms_db.stock_balances: kiểm onHand−reserved ≥ qty → reserved += qty (khóa document)
   2. ecom_db.product_variants: availableQty −= qty   (Ecom tự trừ bản copy — KHÔNG qua event)
   3. ecom_db.orders: tạo Order + OrderItem (snapshot)
@@ -56,10 +55,10 @@ Khi **chốt đơn**, giữ tồn **atomic** trên nguồn thật `wms_db.stock_
 
 > **Reserve tách khỏi thanh toán:** tồn giữ ngay khi đặt (cả COD/online). `order.placed` chỉ là **thông báo thuần**. Thanh toán (`payment.success`) chỉ để **xác nhận đơn online** + **mở lệnh in**.
 
-## Phân bổ 1 kho/đơn (chưa split đa kho)
+## 1 kho duy nhất
 
-- Đơn giữ tồn ở **một kho** có `available ≥ qty` (ưu tiên CENTRAL), lưu `fulfillWarehouseId`.
-- Không kho đơn lẻ nào đủ — dù **tổng** mọi kho đủ — đơn **bị từ chối**. Cần thì [Chuyển kho](05-xuat-kho-va-noi-bo.md) gom hàng về 1 kho trước.
+- Hệ chỉ vận hành **1 kho** (kho trung tâm) → không phân bổ/chọn kho. Mọi đơn giữ tồn & xuất từ kho đó.
+- Đủ tồn → giữ; thiếu → từ chối (báo hết hàng).
 
 ## payment_transactions — sổ cái tiền (append-only)
 

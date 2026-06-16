@@ -2,7 +2,7 @@
 
 > Trạng thái: 🔄 Đang phân tích — theo spec [2026-06-04-ecommerce-order-module-design](../superpowers/specs/2026-06-04-ecommerce-order-module-design.md)
 
-> **Ownership:** Module Order sở hữu `carts`/`orders`/`payment_transactions`. `customerId` trỏ tài khoản khách (`customers`) do **module Auth-Ecom** sở hữu — Order **không định nghĩa schema Customer**, chỉ tham chiếu id. Liên kết WMS **chỉ qua `sku`** + `printJobId`/`fulfillWarehouseId` — không đọc chéo collection. Xem [data-ownership](../overview/data-ownership.md).
+> **Ownership:** Module Order sở hữu `carts`/`orders`/`payment_transactions`. `customerId` trỏ tài khoản khách (`customers`) do **module Auth-Ecom** sở hữu — Order **không định nghĩa schema Customer**, chỉ tham chiếu id. Liên kết WMS **chỉ qua `sku`** + `printJobId` — không đọc chéo collection. Xem [data-ownership](../overview/data-ownership.md).
 
 > **Audit (chung):** xem [Quy ước Audit](../overview/data-ownership.md#quy-ước-audit-chung-mọi-collection). `orders`/`carts` là chứng từ (`createdAt`/`updatedAt`, hủy bằng `status`); `payment_transactions` là **sổ cái append-only bất biến** (chỉ `createdAt`+`createdBy`); bảng `*Item` kế thừa audit từ chứng từ cha. Bảng dưới chỉ liệt kê field nghiệp vụ.
 
@@ -52,7 +52,6 @@
 | paymentStatus | Enum | `UNPAID` / `PAID` / `REFUND_PENDING` / `REFUNDED` |
 | orderStatus | Enum | `PLACED` / `CONFIRMED` / `CANCELLED` / `CLOSED` |
 | fulfillmentStatus | Enum | `NONE` / `AWAITING_PRINT` / `READY_TO_PICK` / `ISSUED` / `SHIPPED` / `DELIVERED` / `RETURNED` |
-| fulfillWarehouseId | ObjectId | Kho WMS đã giữ tồn (1 kho/đơn, ưu tiên CENTRAL) |
 | hasPrintItems | Boolean | Có ly-in → gate trả-trước |
 | paymentDeadline | DateTime | Hạn trả online; quá hạn chưa `PAID` → tự hủy |
 | cancelReason | String | |

@@ -20,8 +20,9 @@ Mỗi cấp chỉ trỏ tới cấp cha (`zoneId`, `rackId`…) — quan hệ ch
 ### warehouses
 | Field | Ý nghĩa |
 |---|---|
-| `type` | `CENTRAL` (kho trung tâm) / `SUB` (kho phụ). Khi chốt đơn **ưu tiên CENTRAL** |
-| `isActive` | Kho ngừng hoạt động thì không phân bổ đơn vào |
+| `isActive` | Kho ngừng hoạt động thì không nhận/xuất |
+
+> **Hệ chỉ có 1 kho** (kho trung tâm) — bảng giữ đúng 1 dòng. Không có kho phụ / chuyển kho. Cấu trúc bảng giữ nguyên để dễ mở rộng đa kho về sau.
 
 ### zones / racks
 Chỉ là cấp trung gian để tổ chức không gian. `code` (A, B / A1, A2) giúp người đọc hiểu, còn hệ định vị thật bằng **shelf**.
@@ -31,7 +32,7 @@ Chỉ là cấp trung gian để tổ chức không gian. `code` (A, B / A1, A2)
 |---|---|
 | `code` | **Giá trị barcode vị trí** — dán tem ở mỗi shelf. PICKER/RECEIVER **quét tem này** khi put-away/pick |
 | `level` | Số tầng (1, 2, 3…) |
-| `isStaging` | `true` = **shelf "khu nhận hàng"** — mỗi kho có 1, là nơi hàng nằm tạm sau khi nhận (GRN) trước khi xếp lên kệ thật |
+| `isStaging` | `true` = **shelf "khu nhận hàng"** — kho có 1, là nơi hàng nằm tạm sau khi nhận (GRN) trước khi xếp lên kệ thật |
 
 ## Vì sao tách `isStaging` riêng?
 

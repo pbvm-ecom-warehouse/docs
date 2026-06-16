@@ -28,7 +28,7 @@ grep -ohE '\]\(\.\.?/[^)#]+\.md' <file>.md
 - **Tồn 2 lớp:** `StockBalance.onHand` (lớp tổng) = Σ `InventoryStock.quantity` mọi shelf; `available = onHand − reserved − expired`. Mọi biến động cập nhật **cả 2 lớp trong 1 transaction**. `StockMovement` là sổ cái append-only đối soát.
 - **Đơn hàng 3 trục trạng thái độc lập:** `paymentStatus` / `orderStatus` / `fulfillmentStatus` (tránh state lai COD×online×make-to-order). Đơn **xuất nguyên kiện, chưa hỗ trợ partial fulfillment**.
 - **Ly in (CUP_PRINTED) per-design:** mỗi mẫu in = 1 SKU riêng. Make-to-order **bắt buộc trả-trước ONLINE**. Chuỗi hold: tạo PrintJob giữ `CUP_BLANK` → in xong hold **chuyển** sang `CUP_PRINTED` cho đúng đơn.
-- **Phân bổ 1 kho/đơn** (ưu tiên `CENTRAL`), lưu `fulfillWarehouseId`; không split đa kho — thiếu thì dùng Chuyển kho gom trước.
+- **1 kho duy nhất** (kho trung tâm). Toàn bộ tồn ở một kho — không phân bổ kho, không chuyển kho, không split đa kho. `available` của một SKU = tồn của kho đó.
 
 ## Cấu trúc tài liệu
 

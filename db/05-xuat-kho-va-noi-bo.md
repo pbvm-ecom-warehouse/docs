@@ -1,8 +1,8 @@
 # 05 — Xuất kho & nội bộ
 
-> Bảng: `goods_issues`, `stock_counts`, `stock_transfers`, `scrap_notes`, `goods_returns` (mỗi bảng + `*_items`) · Schema gốc: [warehouse/data-model — Nhóm 4](../warehouse/data-model.md#nhóm-4-giao-dịch-kho)
+> Bảng: `goods_issues`, `stock_counts`, `scrap_notes`, `goods_returns` (mỗi bảng + `*_items`) · Schema gốc: [warehouse/data-model — Nhóm 4](../warehouse/data-model.md#nhóm-4-giao-dịch-kho)
 
-5 loại phiếu làm **giảm/điều chỉnh** tồn. Tất cả đều ghi vào sổ cái `stock_movements`.
+4 loại phiếu làm **giảm/điều chỉnh** tồn. Tất cả đều ghi vào sổ cái `stock_movements`.
 
 ## goods_issues (+items) — UC-05: Phiếu xuất
 
@@ -11,7 +11,7 @@ Xuất hàng cho đơn. **Trigger:** event `order.ready_to_fulfill` từ Ecom.
 | Field | Ý nghĩa |
 |---|---|
 | `orderId` | Đơn Ecom (reference id) |
-| `warehouseId` | **Phải = `order.fulfillWarehouseId`** (kho đã giữ tồn lúc chốt đơn) |
+| `warehouseId` | Kho trung tâm (kho duy nhất) |
 | `createdBy` | PICKER |
 | item: `lotId` | Lô lấy theo **FEFO** (lô gần hết hạn trước), null nếu không `isPerishable` |
 | item: `shelfId` | Lấy từ shelf nào |
@@ -30,18 +30,6 @@ So tồn hệ thống vs thực tế, ra chênh lệch để điều chỉnh.
 | item: `systemQty` vs `actualQty` → `delta` | Tồn hệ vs đếm thực → chênh lệch + `reason` |
 
 > Duyệt điều chỉnh ghi `stock_movements: ADJUST ±delta`. Đây là cách hợp thức hóa hao hụt/dư.
-
-## stock_transfers (+items) — UC-07: Chuyển kho
-
-Chuyển hàng kho A → kho B. Dùng khi 1 kho không đủ đáp ứng đơn (gom hàng trước).
-
-| Field | Ý nghĩa |
-|---|---|
-| `fromWarehouseId` / `toWarehouseId` | Kho nguồn / đích |
-| `status` | `DRAFT → CONFIRMED → IN_TRANSIT → COMPLETED` (+ CANCELLED) |
-| item: `fromShelfId` / `toShelfId` | Lấy từ shelf nào / đặt vào shelf nào |
-
-> Sinh **2 bút toán lệch dấu**: `TRANSFER_OUT −` (nguồn) + `TRANSFER_IN +` (đích). Trong lúc transit, `available` tổng giảm tạm (reserve nguồn lúc CONFIRMED), nhận đích thì cộng lại → **net trọn vòng = 0**.
 
 ## scrap_notes (+items) — UC-08: Hủy hàng
 
@@ -74,7 +62,6 @@ Khách trả hàng. RECEIVER kiểm → hàng tốt nhập lại, hàng hỏng c
 |---|---|---|---|
 | GoodsIssue | ISSUE − | giảm | ❌ (đã trừ lúc chốt đơn) |
 | StockCount | ADJUST ± | ± | ✅ (nếu available đổi) |
-| StockTransfer | TRANSFER_OUT/IN | net 0 | ✅ (2 event lệch dấu) |
 | ScrapNote | SCRAP − | giảm | ❌ |
 | GoodsReturn (GOOD) | RECEIVE/ADJUST + | tăng | ✅ |
 

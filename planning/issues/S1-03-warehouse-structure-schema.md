@@ -9,13 +9,13 @@ labels: feat,module:warehouse,sprint:1,size:M
 Cấu trúc phân cấp kho `Warehouse → Zone → Rack → Shelf`, kèm **kích thước Shelf** để phục vụ gợi ý put-away (S2-05). Theo [warehouse/data-model.md → Nhóm 1](../../warehouse/data-model.md).
 
 ## Phạm vi
-- [ ] Schema `Warehouse` (loại `CENTRAL`/`SUB`), `Zone`, `Rack`, `Shelf`.
+- [ ] Schema `Warehouse` (1 kho duy nhất — kho trung tâm, không có field `type`), `Zone`, `Rack`, `Shelf`.
 - [ ] `Shelf` có kích thước (`length`/`width`/`height`), `usableVolume` (dẫn xuất), `fillFactor`, cờ `isStaging`.
 - [ ] CRUD REST cho từng cấp (guard `@Roles('MANAGER')` cho ghi).
 - [ ] Sinh/đọc barcode vị trí (shelf).
 
 ## Acceptance criteria
-- Tạo được cây kho mẫu CENTRAL có ≥1 zone/rack/shelf qua API.
+- Tạo được cây kho trung tâm có ≥1 zone/rack/shelf qua API.
 - Shelf staging và shelf thật phân biệt được bằng `isStaging`.
 - `usableVolume` tính đúng từ kích thước × `fillFactor`.
 

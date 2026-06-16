@@ -1,7 +1,7 @@
 # Planning — Backlog 4 tuần hiện thực hóa app WMS
 
 > Nguồn thiết kế: [spec 2026-06-15](../superpowers/specs/2026-06-15-wms-4-week-sprint-plan-design.md).
-> Đích cuối tuần 4: **app WMS nội bộ chạy vững** — `PO → GRN → Put-away (+ gợi ý vị trí) → Xuất kho → Kiểm kê → Chuyển kho → In ly`. Ecom ngoài phạm vi (chỉ chừa event `stock.changed`).
+> Đích cuối tuần 4: **app WMS nội bộ chạy vững** — `PO → GRN → Put-away (+ gợi ý vị trí) → Xuất kho → Kiểm kê → In ly`. Ecom ngoài phạm vi (chỉ chừa event `stock.changed`).
 
 ## Sprint (1 tuần/sprint · đội 2-3 dev · code từ đầu)
 
@@ -9,7 +9,7 @@
 |---|---|---|---|
 | 1 | Nền móng & Auth | [sprint-1-foundation.md](sprint-1-foundation.md) | S1-01 → S1-05 |
 | 2 | Nhập kho | [sprint-2-inbound.md](sprint-2-inbound.md) | S2-01 → S2-06 |
-| 3 | Xuất kho & nội bộ | [sprint-3-outbound-internal.md](sprint-3-outbound-internal.md) | S3-01 → S3-04 |
+| 3 | Xuất kho & nội bộ | [sprint-3-outbound-internal.md](sprint-3-outbound-internal.md) | S3-01 → S3-03 |
 | 4 | Hoàn thiện & Báo cáo | [sprint-4-hardening-reports.md](sprint-4-hardening-reports.md) | S4-01 → S4-06 |
 
 ## Quy ước nhãn (label)

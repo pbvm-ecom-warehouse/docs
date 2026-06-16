@@ -13,7 +13,7 @@
 | 02 | [Hàng hóa & tồn kho 2 lớp](02-hang-hoa-va-ton-kho.md) | warehouse_items, stock_balances, inventory_stocks, lots, stock_movements |
 | 03 | [Nhập kho](03-nhap-kho.md) | purchase_orders, goods_receive_notes, putaway_tasks (+items) |
 | 04 | [In ly (make-to-order)](04-in-ly.md) | print_jobs, print_job_items |
-| 05 | [Xuất kho & nội bộ](05-xuat-kho-va-noi-bo.md) | goods_issues, stock_counts, stock_transfers, scrap_notes, goods_returns (+items) |
+| 05 | [Xuất kho & nội bộ](05-xuat-kho-va-noi-bo.md) | goods_issues, stock_counts, scrap_notes, goods_returns (+items) |
 | 06 | [Supplier](06-supplier.md) | suppliers, supplier_items |
 | 07 | [Shipping](07-shipping.md) | carriers, shipments |
 | 08 | [Auth-WMS](08-auth-wms.md) | users, user_refresh_tokens |

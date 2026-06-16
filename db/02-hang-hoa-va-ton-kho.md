@@ -38,14 +38,14 @@ inventory_stocks ─────────────────────
 | Field | Ý nghĩa |
 |---|---|
 | `onHand` | Tổng vật lý đang có (gồm cả hàng ở staging) |
-| `reserved` | Đã giữ cho đơn/print/chuyển kho, **chưa xuất** |
+| `reserved` | Đã giữ cho đơn/print, **chưa xuất** |
 | `expired` | Tồn thuộc lô **đã hết hạn** — còn vật lý nhưng không bán được |
 | `minQuantity` | Ngưỡng cảnh báo → phát `stock.low` khi `available < minQuantity` |
 
 > `available = onHand − reserved − expired` — **tính khi cần, không lưu** (tránh lưu trùng dễ lệch).
 
 ### inventory_stocks (lớp 2)
-Một SKU có thể nằm nhiều shelf / nhiều kho / nhiều lô → mỗi tổ hợp là 1 dòng. `lotId = null` nếu item không `isPerishable`.
+Một SKU có thể nằm nhiều shelf / nhiều lô → mỗi tổ hợp là 1 dòng. `lotId = null` nếu item không `isPerishable`.
 
 ### lots — chỉ cho item có hạn
 | Field | Ý nghĩa |
@@ -60,15 +60,14 @@ Ghi **mọi** thay đổi tồn vật lý. **Không sửa/xóa, chỉ thêm.**
 
 | Field | Ý nghĩa |
 |---|---|
-| `type` | `RECEIVE`/`PUTAWAY`/`ISSUE`/`TRANSFER_OUT`/`TRANSFER_IN`/`ADJUST`/`SCRAP`/`PRINT_CONSUME`/`PRINT_OUTPUT` |
+| `type` | `RECEIVE`/`PUTAWAY`/`ISSUE`/`ADJUST`/`SCRAP`/`PRINT_CONSUME`/`PRINT_OUTPUT` |
 | `quantity` | Số lượng **có dấu** (+ nhập / − xuất) |
-| `refType`/`refId` | Chứng từ nguồn (GRN/GoodsIssue/StockTransfer…) → truy ngược |
+| `refType`/`refId` | Chứng từ nguồn (GRN/GoodsIssue/StockCount…) → truy ngược |
 
 > **Đối soát:** `onHand = Σ quantity` (theo item+kho). Thẻ kho 1 SKU = lọc `itemId` sắp theo `createdAt`.
 
 > **Giao dịch đổi chỗ sinh 2 bút toán lệch dấu** (net=0 cho onHand nhưng 2 shelf đều đúng):
 > - Put-away: `PUTAWAY −` shelf staging + `PUTAWAY +` shelf thật.
-> - Chuyển kho: `TRANSFER_OUT −` kho nguồn + `TRANSFER_IN +` kho đích.
 
 > ⚠️ **Reserve/release KHÔNG ghi vào sổ này** — chỉ đổi `stock_balances.reserved`, không đụng onHand/vị trí.
 

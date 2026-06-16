@@ -29,7 +29,7 @@ KHÁCH                     CHECKOUT                  WMS (stock_balances)
   |                          |   availableQty −= qty (ecom_db, cùng txn)  (khóa document)
   |                          |<-- OK / hết hàng ---------|
   |                    Tạo Order{PLACED, UNPAID, NONE}    |
-  |                    fulfillWarehouseId; order.placed (thông báo thuần)
+  |                    order.placed (thông báo thuần)     |
 
   |        (chưa ghi sổ tiền — payment_transactions append khi có biến động thật)
   |<-- Đơn đã tạo -----------|                           |

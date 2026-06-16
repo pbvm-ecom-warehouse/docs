@@ -68,7 +68,7 @@ P7  Hậu mãi (nếu có)
 
 1. **`sku`** — `product_variants.sku ⟷ warehouse_items.sku` (đồng bộ tồn qua event).
 2. **`orderId`** (reference id) — `print_jobs`/`goods_issues`/`goods_returns`/`shipments` giữ `orderId`, không join.
-3. **`fulfillWarehouseId`** / **`printJobId`** — Order ghi lại id bên WMS để truy vết.
+3. **`printJobId`** — Order ghi lại id bên WMS để truy vết.
 
 Mọi giao tiếp khác qua **event (BullMQ + Redis)**, không đọc chéo DB.
 
@@ -79,7 +79,7 @@ Mọi giao tiếp khác qua **event (BullMQ + Redis)**, không đọc chéo DB.
 - [ ] `available = onHand − reserved − expired ≥ 0`
 - [ ] Reserve atomic → không oversell
 - [ ] `Order.paymentStatus` = recompute từ `payment_transactions`
-- [ ] 1 đơn = 1 kho (`fulfillWarehouseId`) = 1 vận đơn (`shipments`)
+- [ ] 1 đơn = 1 vận đơn (`shipments`)
 - [ ] Snapshot ở order_items / shippingAddress / recipient / designFile
 
 ---
