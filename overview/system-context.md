@@ -77,7 +77,8 @@ wms-ecom/
 
 | Loại | App | Collection | Roles |
 |---|---|---|---|
-| Nhân viên nội bộ | WMS | `users` | ADMIN / MANAGER / RECEIVER / PICKER / PRINTER / COUNTER |
+| Nhân viên kho | WMS | `users` | ADMIN / MANAGER / RECEIVER / PICKER / PRINTER / COUNTER |
+| Nhân viên shop | Ecommerce | `admin_users` | ECOM_MANAGER |
 | Khách hàng | Ecommerce | `customers` | — |
 
 > **User giữ nhiều role** — field `roles: String[]`. Một nhân viên có thể vừa `RECEIVER` vừa `PICKER`.
@@ -93,9 +94,9 @@ wms-ecom/
 
 ### Cơ chế
 
-- **Access token JWT stateless** (~15 phút) — mỗi app tự validate bằng shared secret, không gọi sang app khác
+- **Access token JWT stateless** (~15 phút) — mỗi app tự validate bằng **public key riêng của mình** (RS256), không gọi sang app khác
 - **Refresh token lưu DB** (đã hash, `*_refresh_tokens`) — sống dài, **thu hồi được**: logout / khóa tài khoản / reset mật khẩu đều revoke. Mỗi lần refresh **xoay token**
-- **Claim `type: user | customer`** trong payload — app Ecommerce (public) phân biệt token nhân viên vs khách. Route admin Ecom bắt buộc `type = user` (+ role ⊇ {ADMIN, MANAGER}) → **back-office shop dùng chung danh bạ `users`** mà không đọc chéo `wms_db` (xem [auth-wms](../auth-wms/use-cases.md), [auth-ecom](../auth-ecom/use-cases.md))
+- **Claim `type: user | customer | admin`** trong payload — `user` = nhân viên kho (WMS token), `customer` = khách (Ecom token), `admin` = nhân viên shop (Ecom token từ `admin_users`). Mỗi app ký token bằng **key riêng** (RS256) — không shared secret. Xem [auth-wms](../auth-wms/use-cases.md), [auth-ecom/data-model](../auth-ecom/data-model.md)
 - Shared logic nằm trong `libs/auth/`
 
 ```

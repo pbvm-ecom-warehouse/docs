@@ -21,21 +21,11 @@ Quản lý tài khoản **nhân viên nội bộ** — danh bạ DUY NHẤT cho 
 - **RolesGuard** cho qua nếu `roles` **giao** với `@Roles(...)` yêu cầu ≠ ∅.
 - `ADMIN` **bypass mọi guard**.
 
-## `users` là chủ thể `type = user` — vì sao quan trọng?
+## `users` là danh bạ nhân viên kho
 
-JWT của nhân viên mang claim **`type = user`**. Đây là mấu chốt của thiết kế auth:
+JWT của nhân viên kho mang claim **`type = user`**, chỉ dùng trong WMS app. WMS backend ký token bằng **private key riêng** (RS256).
 
-```
-Nhân viên đăng nhập (WMS) ──► JWT { type: user, roles: [...] }
-                                   │
-                                   ▼ shared secret
-         Route admin app Ecommerce validate TẠI CHỖ (không đọc chéo wms_db)
-```
-
-- Route admin của Ecommerce (vd quản lý catalog) **tin** token `type = user` qua **shared secret**, không cần query `wms_db`.
-- Token khách mang `type = customer` → **không** qua được route admin.
-
-→ Đây là cách hiện thực Actor "Admin" của catalog mà **không phá** nguyên tắc không đọc chéo DB. Cũng là lý do `createdBy` của các bảng catalog Ecom ghi "admin user (cross-app)".
+Back-office shop (catalog, đơn hàng) dùng `ecom_db.admin_users` với auth riêng của Ecom backend — token mang claim `type = admin`. Hai hệ thống auth hoàn toàn độc lập, không shared secret. Xem [auth-ecom/data-model](../auth-ecom/data-model.md).
 
 ## user_refresh_tokens
 

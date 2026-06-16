@@ -8,7 +8,7 @@
 
 ## User (Tài khoản nhân viên)
 
-> Đích của mọi `@Roles(...)` guard trong WMS, và là chủ thể `type = user` được route admin Ecommerce tin cậy (validate qua shared secret, không đọc chéo `wms_db`).
+> Đích của mọi `@Roles(...)` guard trong WMS. Token `type = user` chỉ dùng trong WMS — Ecom có auth riêng (`ecom_db.admin_users`).
 
 | Field | Type | Mô tả |
 |---|---|---|
@@ -23,7 +23,7 @@
 | createdAt | DateTime | |
 | updatedAt | DateTime | |
 
-> **Nhiều role/user:** RolesGuard cho qua nếu `roles` giao với `@Roles(...)` ≠ ∅; `ADMIN` bypass mọi guard. Việc back-office shop tạm dùng `ADMIN`/`MANAGER` (chưa tách role chuyên biệt).
+> **Nhiều role/user:** RolesGuard cho qua nếu `roles` giao với `@Roles(...)` ≠ ∅; `ADMIN` bypass mọi guard. `MANAGER` phụ trách kho (PO, GRN, in, kiểm, chuyển kho). Back-office shop (catalog, đơn) dùng `ecom_db.admin_users` riêng — xem [auth-ecom/data-model](../auth-ecom/data-model.md).
 
 ## UserRefreshToken (`user_refresh_tokens`)
 

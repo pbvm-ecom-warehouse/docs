@@ -15,7 +15,7 @@
 | UC-AW06 | Làm mới token / Đăng xuất | Nhân viên | 🔄 Đang phân tích |
 | UC-AW07 | Đổi mật khẩu | Nhân viên | 🔄 Đang phân tích |
 
-> **Token nhân viên mang claim `type = user`** → dùng được trên app WMS **và** route admin của Ecommerce (validate bằng shared secret, không đọc chéo DB). Route admin Ecom bắt buộc `type = user` + role ⊇ {ADMIN, MANAGER} — token khách (`type = customer`) không bao giờ qua được. Đây là cách làm rõ Actor "Admin" của [catalog UC-C05](../catalog/use-cases.md#uc-c05-quản-trị-catalog-crud).
+> **Token nhân viên mang claim `type = user`** → dùng trên app WMS. Back-office shop (catalog, đơn) dùng `ecom_db.admin_users` với auth riêng của Ecom backend — không dùng token nhân viên này trên Ecom. Xem [auth-ecom/data-model](../auth-ecom/data-model.md).
 
 ---
 
@@ -37,9 +37,9 @@
 **Mục đích:** Phân quyền theo nghiệp vụ.
 
 ### Luồng chính
-1. Cập nhật `roles[]` — tập con của `ADMIN/MANAGER/RECEIVER/PICKER/PRINTER/COUNTER`
+1. Cập nhật `roles[]` — tập con của `ADMIN / MANAGER / RECEIVER / PICKER / PRINTER / COUNTER`
 2. 1 user giữ **nhiều role** (vd vừa `RECEIVER` vừa `PICKER`); RolesGuard cho qua nếu giao ≠ ∅, `ADMIN` bypass
-3. Việc back-office shop (sửa giá, CRUD catalog, duyệt đơn, hoàn tiền) tạm dùng `ADMIN`/`MANAGER` — *(đường nâng cấp: tách `CATALOG_MANAGER`/`ORDER_MANAGER`, chưa làm ở v1)*
+3. Tất cả roles này chỉ dùng trong WMS. Nhân viên shop (back-office Ecom) có account riêng trong `ecom_db.admin_users`
 
 ---
 

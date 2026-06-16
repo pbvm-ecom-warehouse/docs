@@ -1,8 +1,8 @@
 # Auth-Ecom (Khách hàng) — Data Model
 
 > Trạng thái: 🔄 Đang phân tích
-> **Ownership:** `customers`, `customer_refresh_tokens`, `customer_auth_tokens` thuộc `ecom_db`, do module **auth-ecom** (app Ecommerce) sở hữu. Xem [data-ownership](../overview/data-ownership.md).
-> Cơ chế token chung (access ngắn + refresh lưu DB, claim `type`): [system-context#auth](../overview/system-context.md#auth).
+> **Ownership:** `customers`, `customer_refresh_tokens`, `customer_auth_tokens`, `admin_users`, `admin_refresh_tokens` thuộc `ecom_db`, do module **auth-ecom** (app Ecommerce) sở hữu. Xem [data-ownership](../overview/data-ownership.md).
+> Cơ chế token (access ngắn + refresh lưu DB): [system-context#auth](../overview/system-context.md#auth). Ecom tự ký token bằng key riêng — không dùng chung secret với WMS.
 
 > **Audit (chung):** `customers` (master) mang `createdAt`/`updatedAt`/`deletedAt`; các collection token dùng `createdAt`+`revokedAt`/`usedAt`. Theo [Quy ước Audit](../overview/data-ownership.md#quy-ước-audit-chung-mọi-collection).
 
@@ -38,6 +38,38 @@
 | district | String | Quận/huyện |
 | province | String | Tỉnh/thành |
 | isDefault | Boolean | |
+
+## AdminUser (`admin_users`)
+
+> Tài khoản nhân viên back-office shop — **tách biệt hoàn toàn** với `wms_db.users`. Ecom backend tự quản auth, ký token bằng key riêng.
+
+| Field | Type | Mô tả |
+|---|---|---|
+| id | ObjectId | |
+| username | String | **unique** — định danh đăng nhập |
+| email | String | liên hệ |
+| passwordHash | String | bcrypt/argon2 |
+| name | String | |
+| roles | String[] | `ECOM_MANAGER` — mở rộng sau nếu cần |
+| status | Enum | `ACTIVE` / `LOCKED` |
+| mustChangePassword | Boolean | `true` sau khi tạo/reset mật khẩu tạm |
+| createdAt | DateTime | |
+| updatedAt | DateTime | |
+
+> **Tạo account:** WMS_ADMIN hoặc người có quyền truy cập Ecom backend tạo thủ công (seed script hoặc endpoint riêng). Ít người, ít thay đổi — không cần UI quản lý phức tạp ở v1.
+
+## AdminRefreshToken (`admin_refresh_tokens`)
+
+> Song song với `user_refresh_tokens` bên WMS — cùng cơ chế thu hồi.
+
+| Field | Type | Mô tả |
+|---|---|---|
+| id | ObjectId | |
+| adminId | ObjectId | → AdminUser |
+| tokenHash | String | hash của refresh token |
+| expiresAt | DateTime | ~7–30 ngày |
+| createdAt | DateTime | |
+| revokedAt | DateTime? | set khi logout / xoay token / reset / khóa |
 
 ## CustomerRefreshToken (`customer_refresh_tokens`)
 

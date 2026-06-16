@@ -24,9 +24,9 @@
 ## 2. Auth & User — Hạng 2 ✅ Đã thiết kế
 
 - **Hiện trạng:** ✅ Tách 2 module — [auth-wms](../auth-wms/use-cases.md) (nhân viên, `users`) + [auth-ecom](../auth-ecom/use-cases.md) (khách, `customers`). Spec: [2026-06-05-auth-design](../superpowers/specs/2026-06-05-auth-design.md).
-- **Đã có:** access ngắn + refresh lưu DB (thu hồi được); claim `type=user|customer`; **back-office shop dùng chung `users`** qua shared JWT (làm rõ Actor "Admin" của [catalog UC-C05](../catalog/use-cases.md)); đăng ký + verify email + quên/đặt lại mật khẩu (khách); ADMIN tạo/khóa/reset nhân viên; sổ địa chỉ `customers.addresses[]`.
+- **Đã có:** access ngắn + refresh lưu DB (thu hồi được); claim `type=user|customer|admin`; **back-office shop dùng `ecom_db.admin_users` riêng** (role `ECOM_MANAGER`, RS256 key riêng — xem [auth-ecom/data-model](../auth-ecom/data-model.md)); đăng ký + verify email + quên/đặt lại mật khẩu (khách); ADMIN tạo/khóa/reset nhân viên kho; sổ địa chỉ `customers.addresses[]`.
 - **Event mới:** Auth-Ecom phát `customer.verify_requested` & `customer.password_reset_requested` → Notification (xem [data-ownership](./data-ownership.md#các-event-đồng-bộ-giữa-wms-và-ecommerce)).
-- **Chưa làm (YAGNI):** role chuyên biệt back-office (`CATALOG_MANAGER`/`ORDER_MANAGER` — tạm dùng ADMIN/MANAGER), SSO/OAuth social, 2FA, verify-email cho nhân viên.
+- **Chưa làm (YAGNI):** tách `ECOM_MANAGER` thành `CATALOG_MANAGER`/`ORDER_MANAGER` nếu cần phân tầng hơn, SSO/OAuth social, 2FA, verify-email cho nhân viên.
 
 ## 3. Supplier (Nhà cung cấp) — Hạng 3 ✅ Đã thiết kế
 

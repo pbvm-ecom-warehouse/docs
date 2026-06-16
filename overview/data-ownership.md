@@ -30,9 +30,9 @@ suppliers                      payment_transactions
 supplier_items                 customer_refresh_tokens
 carriers                       customer_auth_tokens
 shipments
-users                          (module Auth-Ecom: customers + token)
-user_refresh_tokens
-(module Auth-WMS: users + token)
+users                          admin_users
+user_refresh_tokens            admin_refresh_tokens
+(module Auth-WMS: users + token) (module Auth-Ecom: customers + admin + token)
 ```
 
 > **Không bao giờ đọc chéo collection trực tiếp giữa 2 app.**
@@ -42,7 +42,9 @@ user_refresh_tokens
 
 > Bên Ecommerce, `categories`/`products`/`product_variants`/`designs` do **module Catalog** sở hữu; `orders`/`carts`/`payment_transactions` do **module Order**; `customers` (+ `customer_refresh_tokens`/`customer_auth_tokens`) do **module Auth-Ecom** sở hữu — Order/Catalog chỉ trỏ `customerId`, **không định nghĩa schema Customer** (xem [auth-ecom/data-model](../auth-ecom/data-model.md)). Xem [Catalog data-model](../catalog/data-model.md).
 
-> **Auth-WMS** sở hữu `users` (+ `user_refresh_tokens`) trong `wms_db` — **danh bạ nhân viên DUY NHẤT** cho cả kho lẫn back-office shop. Nhân viên đăng nhập nhận JWT mang claim `type = user`; route admin của app Ecommerce **validate token tại chỗ bằng shared secret** (không đọc chéo `wms_db`) — đây là cách hiện thực Actor "Admin" của [catalog UC-C05](../catalog/use-cases.md). Token khách mang `type = customer`, không qua được route admin. Xem [auth-wms/use-cases](../auth-wms/use-cases.md).
+> **Auth-WMS** sở hữu `users` (+ `user_refresh_tokens`) trong `wms_db` — danh bạ nhân viên kho. Token mang claim `type = user`, chỉ dùng trong WMS app. Xem [auth-wms/use-cases](../auth-wms/use-cases.md).
+
+> **Auth-Ecom** sở hữu `admin_users` (+ `admin_refresh_tokens`) trong `ecom_db` — nhân viên back-office shop (role `ECOM_MANAGER`). Ecom backend tự ký token bằng key riêng, không liên quan WMS auth. Actor của [catalog UC-C05](../catalog/use-cases.md) và refund đơn hàng dùng token `ECOM_MANAGER` này. Xem [auth-ecom/data-model](../auth-ecom/data-model.md).
 
 ---
 
