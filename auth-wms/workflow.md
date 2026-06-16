@@ -27,21 +27,17 @@ NHÂN VIÊN
 
 ---
 
-## WF-AW02: Đăng nhập → token dùng cả 2 app
+## WF-AW02: Đăng nhập nhân viên kho
 
 ```
-NHÂN VIÊN            AUTH-WMS (app nội bộ)        ECOMMERCE (app public)
-  |-- username+mật khẩu ->| khớp hash? ACTIVE?         |
-  |<-- access(type=user)+refresh                       |
-  |                                                    |
-  |== gọi route admin Ecom (sửa giá / duyệt đơn) ====> | JwtAuthGuard + RolesGuard
-  |       (kèm access token)                           |  validate shared secret tại chỗ
-  |                                                    |  type==user? roles ⊇ {ADMIN,MANAGER}?
-  |                                                    |  YES → cho qua (KHÔNG đọc wms_db)
-  |<-------------------------------------------------- |  token type=customer → 403
+NHÂN VIÊN KHO        AUTH-WMS (app nội bộ)
+  |-- username+mật khẩu ->| khớp hash? ACTIVE?
+  |<-- access(type=user, roles=[...])+refresh
+  |
+  |== gọi WMS routes (PO, GRN, in, kiểm...) ==> WMS backend validate bằng WMS public key
 ```
 
-> App Ecommerce **không đọc `wms_db.users`** — chỉ tin claim trong token đã ký bằng shared secret. Đây là cách hiện thực Hướng A (một danh bạ nhân viên).
+> Token `type=user` chỉ dùng trong WMS. Back-office shop (catalog, đơn) dùng `ecom_db.admin_users` với auth riêng — xem [auth-ecom/data-model](../auth-ecom/data-model.md).
 
 ---
 

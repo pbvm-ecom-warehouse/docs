@@ -78,7 +78,7 @@
 
 ## UC-C05: Quản trị catalog (CRUD)
 
-**Actor:** Admin — nhân viên back-office (`users`, token `type = user`, role ⊇ {ADMIN, MANAGER}); xem [auth-wms](../auth-wms/use-cases.md). Route admin của app Ecommerce validate token bằng shared secret, **không đọc chéo `wms_db`**.
+**Actor:** Nhân viên shop (`admin_users`, token `type = admin`, role `ECOM_MANAGER`); xem [auth-ecom/data-model](../auth-ecom/data-model.md). Ecom backend tự validate token bằng key riêng.
 **Mục đích:** Tạo/sửa danh mục, sản phẩm, biến thể.
 
 ### Luồng chính

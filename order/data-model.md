@@ -99,7 +99,7 @@
 > - có `REFUND` PENDING → `REFUND_PENDING`; `REFUND` SUCCESS (đủ amount) → `REFUNDED`
 > - dòng `FAILED` chỉ lưu vết audit, **không** đổi `paymentStatus`
 
-> **Luồng hoàn tiền (refund):** chỉ áp dụng cho ONLINE đã `PAID` (hủy [WF-E04](./workflow.md#wf-e04-hủy-đơn-trước-xuất-kho) hoặc RMA [WF-E05](./workflow.md#wf-e05-hoàn-hàng-rma)). Khi đơn vào `paymentStatus = REFUND_PENDING`, **hệ thống (job)/admin** (nhân viên back-office `type=user`, role ⊇ {ADMIN, MANAGER} — xem [auth-wms](../auth-wms/use-cases.md)) gọi API hoàn tiền của cổng → append `REFUND/PENDING` → nhận callback → append `REFUND/SUCCESS` (idempotent theo `providerTxnId`) → recompute `Order.paymentStatus = REFUNDED`. Refund thất bại → giữ `REFUND_PENDING`, cảnh báo để xử lý tay. COD chưa thu tiền (chưa có dòng `COD_COLLECT`) → không refund.
+> **Luồng hoàn tiền (refund):** chỉ áp dụng cho ONLINE đã `PAID` (hủy [WF-E04](./workflow.md#wf-e04-hủy-đơn-trước-xuất-kho) hoặc RMA [WF-E05](./workflow.md#wf-e05-hoàn-hàng-rma)). Khi đơn vào `paymentStatus = REFUND_PENDING`, **hệ thống (job)/admin** (nhân viên shop `type=admin`, role `ECOM_MANAGER` — xem [auth-ecom/data-model](../auth-ecom/data-model.md)) gọi API hoàn tiền của cổng → append `REFUND/PENDING` → nhận callback → append `REFUND/SUCCESS` (idempotent theo `providerTxnId`) → recompute `Order.paymentStatus = REFUNDED`. Refund thất bại → giữ `REFUND_PENDING`, cảnh báo để xử lý tay. COD chưa thu tiền (chưa có dòng `COD_COLLECT`) → không refund.
 
 ## Nhóm 4: Ba trục trạng thái
 

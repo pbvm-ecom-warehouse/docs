@@ -5,6 +5,7 @@
 | Tài liệu                                         | Nội dung                                          |
 | ------------------------------------------------ | ------------------------------------------------- |
 | [System Context](./overview/system-context.md)   | Kiến trúc tổng thể, Nginx, BullMQ, Infrastructure |
+| [Frontend Architecture](./overview/frontend-architecture.md) | 2 FE app (WMS FE nội bộ + Ecom FE public), route layout, phân quyền menu theo role |
 | [NestJS Monorepo](./overview/nestjs-monorepo.md) | Monorepo mode, Auth tách biệt WMS vs Ecommerce    |
 | [Data Ownership](./overview/data-ownership.md)   | Phân chia collection, sync tồn kho qua event, Quy ước Audit |
 | [Main Flow](./overview/main-flow.md)             | Luồng nghiệp vụ end-to-end toàn hệ thống (P0→P7)   |
@@ -62,9 +63,10 @@ Warehouse (Kho trung tâm / Kho phụ)
 
 | Role     | Quyền hạn                                                           |
 | -------- | ------------------------------------------------------------------- |
-| ADMIN    | Xem tất cả, cấu hình hệ thống, báo cáo toàn diện (bypass mọi guard) |
-| MANAGER  | Tạo/duyệt phiếu nhập-xuất, lệnh in, kiểm kho, chuyển kho            |
-| RECEIVER | Nhận hàng (GRN), put-away, nhận hàng chuyển kho                     |
-| PICKER   | Soạn & xuất hàng, xuất hàng chuyển kho                              |
-| PRINTER  | Vận hành in, xác nhận in xong                                       |
-| COUNTER  | Kiểm đếm tồn thực tế                                                |
+| ADMIN        | (`wms_db.users`) Toàn quyền WMS, bypass mọi guard                  |
+| MANAGER      | (`wms_db.users`) Tạo/duyệt phiếu nhập-xuất, lệnh in, kiểm kho, chuyển kho |
+| RECEIVER     | (`wms_db.users`) Nhận hàng (GRN), put-away, nhận hàng chuyển kho   |
+| PICKER       | (`wms_db.users`) Soạn & xuất hàng, xuất hàng chuyển kho            |
+| PRINTER      | (`wms_db.users`) Vận hành in, xác nhận in xong                     |
+| COUNTER      | (`wms_db.users`) Kiểm đếm tồn thực tế                              |
+| ECOM_MANAGER | (`ecom_db.admin_users`) Set giá, CRUD catalog, xem/can thiệp đơn — **auth riêng Ecom** |

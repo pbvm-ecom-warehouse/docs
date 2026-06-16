@@ -15,7 +15,7 @@ Hệ WMS-ECOM có **3 nhóm người dùng**, nhưng tài liệu cũ mới đị
 
 **Spec này định nghĩa:** danh tính + cơ chế đăng nhập/token cho cả 3 nhóm, schema `customers` (lấp chỗ Order/Catalog đang trỏ `customerId`), quản lý tài khoản nhân viên, refresh token, verify email, quên/đổi mật khẩu, khóa tài khoản.
 
-**Ngoài phạm vi (YAGNI):** sổ cái tiền `payment_transactions` (brainstorm riêng cho Order/Payment ngay sau spec này); SSO/OAuth social login; 2FA; guest checkout (đã loại ở gap-analysis); role chuyên biệt cho back-office shop (tạm dùng ADMIN/MANAGER).
+**Ngoài phạm vi (YAGNI):** sổ cái tiền `payment_transactions` (brainstorm riêng cho Order/Payment ngay sau spec này); SSO/OAuth social login; 2FA; guest checkout (đã loại ở gap-analysis); tách `SHOP_MANAGER` thành `CATALOG_MANAGER`/`ORDER_MANAGER` nếu cần phân tầng hơn.
 
 ## 2. Cấu trúc tài liệu
 
@@ -34,20 +34,20 @@ Phần JWT/`libs/auth` dùng chung **không lặp đặc tả**: [system-context
 - Auth nội-app đồng bộ. Auth chỉ phát event **sang Notification** (không phát event giữa WMS↔Ecom).
 - `customers._id` = `customerId` mà Order/Catalog tham chiếu. Order vẫn **snapshot** địa chỉ lúc checkout (không trỏ ref địa chỉ).
 
-## 4. Cơ chế token (chung 2 app)
+## 4. Cơ chế token
 
-- **Access token** JWT, sống ngắn (~15 phút), **stateless** — mỗi app tự validate bằng shared secret (giữ nguyên hiện trạng).
+- **Access token** JWT, sống ngắn (~15 phút), **stateless** — mỗi app tự validate bằng **public key riêng** (RS256). Không shared secret.
 - **Refresh token** sống dài (~7–30 ngày), **lưu DB (đã hash)**, thu hồi được. Mỗi lần refresh **xoay token** (cấp refresh mới, revoke cũ).
-- **JWT payload thêm claim `type: user | customer`** để app public (Ecommerce) phân biệt token nhân viên vs token khách.
+- **JWT payload claim `type`**: `user` = nhân viên kho (WMS token), `customer` = khách (Ecom token), `admin` = nhân viên shop (Ecom token từ `admin_users`).
 - **Logout** = revoke refresh token hiện tại.
-- **Khóa tài khoản** (`status=LOCKED`) = revoke toàn bộ refresh của user + chặn cấp access/refresh mới. Access đang sống tự hết sau vài phút (chấp nhận trễ ngắn — đánh đổi của stateless).
+- **Khóa tài khoản** (`status=LOCKED`) = revoke toàn bộ refresh của user + chặn cấp access/refresh mới.
 
-### Back-office shop dùng chung danh bạ nhân viên (Hướng A)
+### Back-office shop dùng collection riêng (Hướng B)
 
-- `users` (WMS) là **danh bạ nhân viên DUY NHẤT** cho cả kho lẫn back-office shop — không đẻ collection riêng cho Ecom staff.
-- Nhân viên đăng nhập qua **auth-wms** (app nội bộ) → nhận token `type=user`. Vì `libs/auth` **chung secret**, app Ecommerce **validate token tại chỗ** trên route admin — **không đọc `wms_db`**.
-- Route admin của Ecom: `JwtAuthGuard + RolesGuard`, **bắt buộc `type=user`** + role ⊇ {ADMIN, MANAGER}. Token `type=customer` **không bao giờ** chạm được route admin.
-- Tạm dùng `ADMIN`/`MANAGER` cho việc shop. **Điểm mở rộng:** tách `CATALOG_MANAGER`/`ORDER_MANAGER` khi thực sự cần.
+- `ecom_db.admin_users` = danh bạ nhân viên shop, role `ECOM_MANAGER`.
+- Nhân viên shop đăng nhập qua Ecom FE `/admin/login` → Ecom backend → token `type=admin`.
+- Route `/admin/*` của Ecom: bắt buộc `type=admin`. Token khách (`type=customer`) hoặc token kho (`type=user`) đều không qua được.
+- WMS và Ecom auth hoàn toàn độc lập — mỗi app có private/public key riêng.
 
 ## 5. Data Model
 
@@ -149,7 +149,7 @@ Phần JWT/`libs/auth` dùng chung **không lặp đặc tả**: [system-context
 | D4 | Chưa verify vẫn login & mua | ít ma sát, Order không cần check cờ verify |
 | D5 | `customers.addresses[]` sổ địa chỉ nhiều mục | linh hoạt; Order vẫn snapshot lúc checkout |
 | D6 | ADMIN tạo/khóa/reset nhân viên, không tự đăng ký | chuẩn nội bộ |
-| D7 | Back-office shop = `users` chung + claim `type` (Hướng A), tạm dùng ADMIN/MANAGER | tránh nhân đôi danh bạ; làm rõ "Admin" của UC-C05 |
+| D7 | Back-office shop = `ecom_db.admin_users` riêng (Hướng B); role `ECOM_MANAGER`; RS256 key riêng từng app | auth hoàn toàn độc lập, không shared secret; lộ key Ecom không ảnh hưởng WMS |
 
 ## 11. Follow-up (sau spec này)
 
