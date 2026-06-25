@@ -3,7 +3,29 @@
     "allow": [
       "Read(//home/hoaiphuong/code/wms-ecom/**)",
       "Read(//home/hoaiphuong/code/**)",
-      "Bash(mkdir -p /home/hoaiphuong/code/wms-ecom/docs/overview /home/hoaiphuong/code/wms-ecom/docs/warehouse /home/hoaiphuong/code/wms-ecom/docs/auth /home/hoaiphuong/code/wms-ecom/docs/order /home/hoaiphuong/code/wms-ecom/docs/supplier /home/hoaiphuong/code/wms-ecom/docs/shipping /home/hoaiphuong/code/wms-ecom/docs/report)"
+      "Bash(mkdir -p /home/hoaiphuong/code/wms-ecom/docs/overview /home/hoaiphuong/code/wms-ecom/docs/warehouse /home/hoaiphuong/code/wms-ecom/docs/auth /home/hoaiphuong/code/wms-ecom/docs/order /home/hoaiphuong/code/wms-ecom/docs/supplier /home/hoaiphuong/code/wms-ecom/docs/shipping /home/hoaiphuong/code/wms-ecom/docs/report)",
+      "Bash(rtk ls *)",
+      "Bash(rtk grep *)",
+      "Bash(gh auth *)",
+      "Bash(git checkout *)",
+      "Bash(git commit -q -m ' *)",
+      "Bash(rtk git *)",
+      "Bash(git worktree *)",
+      "Bash(gh --version)",
+      "Bash(rtk gh *)",
+      "Bash(gh project *)",
+      "Bash(echo \"=== exit: $? ===\")",
+      "Bash(env)",
+      "Bash(jobs -l)",
+      "Bash(gh issue *)",
+      "Bash(git -C /home/hoaiphuong/code/wms-ecom/docs add README.md auth-ecom/data-model.md auth-wms/data-model.md auth-wms/use-cases.md auth-wms/workflow.md catalog/use-cases.md db/08-auth-wms.md order/data-model.md overview/data-ownership.md overview/gap-analysis.md overview/system-context.md superpowers/specs/2026-06-05-auth-design.md overview/frontend-architecture.md)",
+      "Bash(git -C /home/hoaiphuong/code/wms-ecom/docs commit -m ' *)",
+      "Bash(GIT_SSH_COMMAND='ssh -o BatchMode=yes' rtk git *)",
+      "Bash(git -C /home/hoaiphuong/code/wms-ecom/docs checkout main)",
+      "Bash(git -C /home/hoaiphuong/code/wms-ecom/docs merge --ff-only docs/wms-4-week-sprint-plan)",
+      "Bash(rtk wc *)",
+      "Bash(git rm *)",
+      "Bash(git commit *)"
     ],
     "additionalDirectories": [
       "/home/hoaiphuong/code/wms-ecom/docs"
