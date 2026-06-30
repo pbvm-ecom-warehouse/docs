@@ -14,7 +14,7 @@ Cùng một sản phẩm nhưng WMS và Ecommerce nhìn theo 2 góc độ khác 
 
 ## Nguyên tắc: 2 logical DB, mỗi app sở hữu collection riêng
 
-> 1 MongoDB cluster tách thành 2 database logic — `wms_db` (collection của WMS) và `ecom_db` (collection của Ecommerce). Cùng cluster nên transaction atomic xuyên 2 DB **vẫn làm được** khi cần (vd: giữ tồn lúc đặt hàng), không phải dùng Saga.
+> 1 MongoDB cluster tách thành 2 database logic — `wms_db` (collection của WMS) và `ecom_db` (collection của Ecommerce). Hai app có connection riêng biệt, **không transaction xuyên DB**. Phối hợp xuyên app (vd: giữ tồn lúc đặt hàng) đi qua **saga bất đồng bộ** (`STOCK_RESERVE_REQUESTED` → `STOCK_RESERVED`/`STOCK_RESERVE_FAILED`).
 
 ```
 WMS sở hữu:                    Ecommerce sở hữu:
@@ -101,7 +101,7 @@ Ecommerce worker nhận event
   → product_variants.availableQty += 200
 ```
 
-**Đường 2 — reserve/release lúc checkout/hủy** (do Ecom khởi xướng): Ecom tự trừ/cộng `availableQty` **ngay trong transaction** checkout/hủy, **không** qua event (xem [Chống oversell](#chống-oversell-khi-xác-nhận-đơn)).
+**Đường 2 — reserve/release lúc checkout/hủy** (do Ecom khởi xướng): Ecom phát `STOCK_RESERVE_REQUESTED` → WMS giữ tồn → phản hồi `STOCK_RESERVED`/`STOCK_RESERVE_FAILED` (saga bất đồng bộ). Ecom trừ `availableQty` sau khi nhận xác nhận, **không** qua event đường 1 (tránh trừ 2 lần). Xem [Chống oversell](#chống-oversell-khi-xác-nhận-đơn).
 
 > Lúc PICKER xuất kho thật, `onHand -= 50` và `reserved -= 50` → `available` **không đổi** → không bắn event (đã trừ từ lúc chốt đơn, tránh trừ 2 lần).
 
@@ -133,10 +133,10 @@ export class StockProcessor {
 
 | Event | Từ | Đến | Khi nào |
 |---|---|---|---|
-| `stock.changed` | WMS | Ecommerce | **Khi `available` đổi do biến động phía WMS**: nhập kho (GRN), kiểm kho điều chỉnh, in ly (blank↓ khi tạo lệnh; printed↑ **chỉ khi in vào kho, không gắn đơn**), hoàn hàng. *(KHÔNG bắn khi: put-away, pick-xuất, **scrap**; **cũng KHÔNG bắn cho reserve/release lúc checkout/hủy đơn** — Ecom tự trừ/cộng `availableQty` ngay trong transaction, xem [Chống oversell](#chống-oversell-khi-xác-nhận-đơn))* |
-| `order.placed` | Ecommerce | WMS | **Khách chốt đơn (cả COD/online)** → **thông báo thuần** để WMS ghi nhận đơn. **KHÔNG reserve ở đây** — tồn đã giữ atomic ngay trong transaction checkout (Ecom ghi thẳng `wms_db.stock_balances`, xem [Chống oversell](#chống-oversell-khi-xác-nhận-đơn)). Trigger xuất kho là `order.ready_to_fulfill` |
+| `stock.changed` | WMS | Ecommerce | **Khi `available` đổi do biến động phía WMS**: nhập kho (GRN), kiểm kho điều chỉnh, in ly (blank↓ khi tạo lệnh; printed↑ **chỉ khi in vào kho, không gắn đơn**), hoàn hàng. *(KHÔNG bắn khi: put-away, pick-xuất, **scrap**; **cũng KHÔNG bắn cho reserve/release lúc checkout/hủy đơn** — reserve đi qua saga `STOCK_RESERVE_REQUESTED`, xem [Chống oversell](#chống-oversell-khi-xác-nhận-đơn))* |
+| `order.placed` | Ecommerce | WMS | **Khách chốt đơn (cả COD/online)** → **thông báo thuần** để WMS ghi nhận đơn. **KHÔNG reserve ở đây** — tồn được giữ riêng qua saga `STOCK_RESERVE_REQUESTED` trước khi chốt đơn (xem [Chống oversell](#chống-oversell-khi-xác-nhận-đơn)). Trigger xuất kho là `order.ready_to_fulfill` |
 | `print.requested` | Ecommerce | WMS | `payment.success` & đơn có ly-in → WMS mở PrintJob (UC-04) cho từng ly-in (make-to-order chỉ chạy sau khi đã trả) |
-| `order.cancelled` | Ecommerce | WMS | Hủy đơn trước khi xuất → **thông báo thuần**; release reserve (`reserved −= qty`) + `availableQty += qty` đã do Ecom làm atomic trong transaction hủy. WMS ghi nhận để dừng downstream |
+| `order.cancelled` | Ecommerce | WMS | Hủy đơn trước khi xuất → Ecom phát `STOCK_RELEASE_REQUESTED`; WMS bù tồn (`reserved −= qty`) rồi bắn `stock.changed` (delta dương) để Ecom cộng lại `availableQty`. WMS ghi nhận để dừng downstream |
 | `order.returned` | Ecommerce | WMS | Khách trả hàng → WMS mở phiếu hoàn (UC-09), nhập lại hàng tốt |
 | `print.completed` | WMS | Ecommerce | PrintJob của đơn in xong → Ecom set `OrderItem.printJobId`; đã in xong **mọi** ly-in của đơn → lật `fulfillmentStatus: AWAITING_PRINT → READY_TO_PICK` |
 | `order.ready_to_fulfill` | Ecommerce | WMS | Đơn vào `READY_TO_PICK` (COD ngay sau checkout / online-không-in khi `payment.success` / đơn ly-in sau khi in xong) → WMS sinh `GoodsIssue` (UC-05) xuất từ kho trung tâm. **Payload mang theo** `shippingAddress` + `recipient{name,phone}` + `paymentMethod` + `codAmount` để WMS dựng `Shipment` (WMS không đọc `ecom_db`) |
@@ -183,21 +183,40 @@ async validateStock(items: OrderItem[]) {
 
 `validateStock` ở trên chỉ là **kiểm tra sơ bộ** dựa trên bản copy `availableQty` (có thể trễ vì sync bất đồng bộ). Nếu 2 khách mua cùng lúc món cuối cùng, cả 2 đều đọc `availableQty = 1` → cả 2 đơn lọt → oversell.
 
-Khi **chốt đơn**, phải giữ tồn **atomic** trên nguồn thật `wms_db.stock_balances` trong 1 transaction — vì cùng cluster nên làm được:
+Chống oversell bằng **saga reserve bất đồng bộ** — Ecom và WMS giữ tồn qua event, không transaction xuyên DB:
 
-Đặt hàng → mở transaction (xuyên 2 logical DB cùng cluster):
-  1. wms_db.stock_balances: kiểm `onHand − reserved ≥ qty` rồi `reserved += qty` (atomic, khóa document)
-  2. ecom_db.product_variants: `availableQty −= qty` (Ecom tự trừ bản copy của mình — không qua event)
-  3. ecom_db.orders: tạo Order + OrderItem (snapshot)
-  → commit cùng lúc; nếu không đủ → rollback + báo hết hàng
+```
+Ecom checkout → STOCK_RESERVE_REQUESTED { sku, qty }
+                        ↓
+            WMS kiểm onHand − reserved ≥ qty
+                    ├─ đủ → reserved += qty → STOCK_RESERVED
+                    └─ thiếu              → STOCK_RESERVE_FAILED
+
+Ecom nhận STOCK_RESERVED:
+  → ecom_db.product_variants: availableQty −= qty
+  → ecom_db.orders: tạo Order + OrderItem (snapshot)
+  → order.placed (thông báo thuần sang WMS)
+
+Ecom nhận STOCK_RESERVE_FAILED:
+  → báo hết hàng, huỷ luồng checkout
+```
+
+> **Reserve tách khỏi thanh toán:** tồn được giữ sau khi nhận `STOCK_RESERVED` — áp dụng cho cả COD và online. Thanh toán (`payment.success`) chỉ dùng để **xác nhận đơn online** và **mở lệnh in** cho đơn ly-in (`print.requested`). Đơn online quá hạn chưa trả → tự `order.cancelled` → `STOCK_RELEASE_REQUESTED`.
 
 > Giữ tồn ở **lớp tổng** (`stock_balances`), chưa cần biết shelf — PICKER chọn vị trí lấy sau ở khâu xuất kho.
 
-> Hai khách mua đồng thời ly cuối → chỉ 1 transaction commit được → **không bao giờ oversell**. Đây chính là lợi thế của monolith cùng cluster; nếu tách 2 MongoDB server riêng (microservices) thì mới phải dùng Saga.
+### Luồng hủy đơn (release reserve)
 
-> **Reserve tách khỏi thanh toán:** tồn được giữ ngay khi đặt (atomic trong transaction checkout — `order.placed` chỉ là thông báo thuần), áp dụng cho cả COD và online. Thanh toán (`payment.success`) chỉ dùng để **xác nhận đơn online** và **mở lệnh in** cho đơn ly-in (`print.requested`). Đơn online quá hạn chưa trả → tự `order.cancelled` (release reserve).
+```
+Ecom order.cancelled → STOCK_RELEASE_REQUESTED { sku, qty }
+                              ↓
+                  WMS: reserved −= qty
+                       → stock.changed { sku, delta: +qty }   (đường 1)
+                              ↓
+                  Ecom worker: availableQty += qty
+```
 
 ### Phân bổ kho khi chốt đơn
 
 - Hệ chỉ vận hành **1 kho duy nhất** (kho trung tâm) → không có bước chọn/phân bổ kho. Mọi đơn giữ tồn và xuất từ kho đó. GoodsIssue (UC-05) luôn xuất từ kho trung tâm.
-- Đủ tồn ở kho → giữ; không đủ → từ chối (báo hết hàng).
+- Đủ tồn ở kho → giữ; không đủ → WMS phát `STOCK_RESERVE_FAILED` → Ecom báo hết hàng.
