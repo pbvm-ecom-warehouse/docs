@@ -60,6 +60,8 @@ Tức là với UC-N04/N05: nếu chỉ có email (không có Firebase), chỉ g
 ## Routing Pattern
 
 ```ts
+// Snippet này mô tả thiết kế mục tiêu sau khi S4-04 mở rộng constructor với FirebaseService.
+// Hiện tại (S1-05): constructor chỉ nhận EmailService.
 async process(job: Job): Promise<void> {
   const key = job.id ?? `${job.name}:${Date.now()}`;
   switch (job.name) {

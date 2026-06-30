@@ -25,6 +25,8 @@ await resend.emails.send(
 
 > Resend lưu key 24h. Vì BullMQ retry trong vài phút (exponential backoff), window này đủ rộng.
 
+> **Lưu ý S4-04:** `EmailService.send()` hiện tại chỉ `logger.error` khi Resend trả lỗi — không throw. Để BullMQ retry hoạt động, S4-04 cần sửa `email.service.ts` để throw khi `error` truthy (sau khi `resend.emails.send()` trả về).
+
 **Fallback khi `job.id` = undefined:**
 ```ts
 const key = job.id ?? `${job.name}:${Date.now()}`;
