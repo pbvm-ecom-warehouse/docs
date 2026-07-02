@@ -85,14 +85,16 @@ Base path: `api/wms/purchase-orders` (global prefix `api/wms` đã set ở `main
 
 Response DTO theo `dto-conventions.md`: `PurchaseOrderResponseDto` (`@Expose` toàn field, `_id`→`id`, nested `items` qua `@Type(() => PurchaseOrderItemResponseDto)`). Enum `status` khai `@ApiProperty({ enum: PurchaseOrderStatus })`. `@Roles` ghi kèm `— [MANAGER, ADMIN]` trong `@ApiOperation summary`.
 
-### Error codes mới (`apps/wms/src/common/error-codes.ts` → `WMS_ERRORS`)
+### Error codes mới (`libs/common/src/errors/error-codes.ts` → `ERROR_CATALOG`)
+
+> **Lưu ý quan trọng:** `AppException` chỉ fallback status/message từ `ERROR_CATALOG` (cross-cutting), KHÔNG đọc `apps/wms/src/common/error-codes.ts` (`WMS_ERRORS`). Nếu thêm code vào `WMS_ERRORS` mà không truyền `status`/`message` tay lúc throw, request sẽ trả `400` sai với message = code string. Commit `3bb033b` đã tự sửa lỗi này cho `SUPPLIER_*` — làm theo đúng pattern đó: **mọi code mới của PO đặt trong `ERROR_CATALOG`**, không phải `WMS_ERRORS` (xem memory `coding-mistakes-log`).
 
 ```ts
 PO_PRICE_MISSING: { status: HttpStatus.BAD_REQUEST, message: 'Thiếu đơn giá — SKU chưa có báo giá NCC, cần nhập tay' }
 PO_NOT_FOUND: { status: HttpStatus.NOT_FOUND, message: 'Không tìm thấy đơn đặt hàng' }
 ```
 
-(Dùng lại `SUPPLIER_NOT_ACTIVE`, `WAREHOUSE_NOT_FOUND`, `SUPPLIER_ITEM_NOT_FOUND` đã có sẵn — không tạo trùng.)
+Thêm 2 code trên vào cuối `ERROR_CATALOG` (dưới nhóm `WMS — Supplier`, tạo nhóm mới `WMS — Purchase Order`). Dùng lại `SUPPLIER_NOT_ACTIVE`, `WAREHOUSE_NOT_FOUND`, `SUPPLIER_ITEM_NOT_FOUND` đã có sẵn trong `ERROR_CATALOG` — không tạo trùng.
 
 ## Acceptance Criteria (từ issue, giữ nguyên)
 
