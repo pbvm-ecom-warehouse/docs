@@ -11,7 +11,7 @@ WMS chưa có endpoint báo cáo nào — mọi số liệu tồn/hiệu suất 
 1. **1 endpoint tồn theo SKU+kho, không gộp lô vào cùng response** — `GET /reports/stock` trả 1 dòng/(sku, warehouse) đọc trực tiếp từ `StockBalance` (đã là snapshot đúng cấp độ này — không cần tự tính lại từ `InventoryStock`). Phần lô hết hạn/sắp hết hạn tách sang endpoint riêng (`GET /reports/stock/lots`) vì `Lot` chỉ áp dụng cho hàng `isPerishable`; gộp chung sẽ làm response phức tạp không cần thiết cho hàng thường.
 2. **Báo cáo hiệu suất trả tổng hợp theo loại movement trong cả khoảng ngày, không breakdown theo từng ngày** — khớp đúng acceptance criteria ("khớp đếm trên `stock_movements` trong khoảng ngày"), không thêm time-series (YAGNI — issue không yêu cầu vẽ biểu đồ xu hướng).
 3. **Chuẩn phân trang mới (`PaginatedResult`/`OffsetPaginationQuery`/`buildOffsetMeta` từ `@app/common`)** — hạ tầng này đã tồn tại trong `libs/common/src/pagination/` từ cross-cutting-standards nhưng **chưa module nào trong `apps/wms` dùng** (tất cả vẫn tự viết `{ data, total, page, limit }`, vd `stock.controller.ts`). Report là module mới, hoàn toàn hợp lý để là module đầu tiên theo đúng chuẩn đã thiết kế sẵn — không phải sửa module cũ.
-4. **Ngưỡng "sắp hết hạn" cố định 7 ngày**, không nhận query param tùy chỉnh — đơn giản hoá cho task này, dễ thêm `?withinDays=` sau nếu FE cần.
+4. **Ngưỡng "sắp hết hạn" lấy theo `WarehouseItem.nearExpiryDays` của từng item, fallback 7 ngày nếu item không set** — `nearExpiryDays` đã tồn tại sẵn trên schema (`create-warehouse-item.dto.ts`, `warehouse-item.response.dto.ts`) nhưng **chưa có code nào đọc field này** — báo cáo lô là consumer đầu tiên, đúng ý định thiết kế ban đầu của field (mỗi item có ngưỡng cảnh báo riêng, vd sữa tươi cần cảnh báo sớm hơn bánh quy khô). Không nhận query param tùy chỉnh toàn cục — ngưỡng đã cấu hình per-item rồi nên không cần thêm `?withinDays=`.
 5. **`GET /reports/performance` không phân trang** — kết quả group theo `MovementType` (tối đa 8 dòng cố định theo enum hiện có), phân trang không có ý nghĩa với tập kết quả nhỏ cố định này.
 6. **`dateFrom`/`dateTo` optional, mặc định 30 ngày gần nhất nếu không truyền** — tránh bắt buộc client luôn phải tính ngày, vẫn cho phép filter khoảng tuỳ ý khi cần.
 7. **Không validate tồn tại của `warehouseId`/`sku` trong filter** — đây là các tiêu chí `$match` thuần, khớp quy ước hiện có (`QueryWarehouseItemDto` và các query DTO tương tự trong dự án không kiểm tra FK tồn tại). `warehouseId` vẫn gắn `@IsMongoId()` để tránh Mongoose `CastError` (500) khi client gửi id sai định dạng — lỗi đó phải là `400 VALIDATION_FAILED` qua `ValidationPipe` toàn cục.
@@ -54,11 +54,11 @@ Nguồn: `StockBalance` — mỗi document đã là 1 dòng (itemId, warehouseId
 
 ### 2. `GET /reports/stock/lots`
 Query: `warehouseId?`, `sku?`, `status?` (`LotStatus` enum), `page`/`limit`.
-Nguồn: `InventoryStock` với `$match: { lotId: { $ne: null } }` (loại hàng không perishable) + filter warehouse, `$group` theo `(lotId, warehouseId)` sum `quantity`, `$lookup` → `Lot` (lotNumber, expiryDate, status — filter theo `status` nếu truyền), `$lookup` → `WarehouseItem` (qua `itemId` — cần giữ `itemId` trong `$group` bằng `$first` vì cùng 1 lot luôn cùng 1 item) và `Warehouse` (name). Response mỗi dòng:
+Nguồn: `InventoryStock` với `$match: { lotId: { $ne: null } }` (loại hàng không perishable) + filter warehouse, `$group` theo `(lotId, warehouseId)` sum `quantity`, `$lookup` → `Lot` (lotNumber, expiryDate, status — filter theo `status` nếu truyền), `$lookup` → `WarehouseItem` (qua `itemId` — cần giữ `itemId` trong `$group` bằng `$first` vì cùng 1 lot luôn cùng 1 item; lấy thêm `nearExpiryDays` từ đây) và `Warehouse` (name). Response mỗi dòng:
 ```
 { sku, itemName, lotNumber, expiryDate, warehouseId, warehouseName, quantity, status, expiryFlag }
 ```
-`expiryFlag` tính ở service: `status === EXPIRED || expiryDate < now` → `'expired'`; else `expiryDate <= now + 7 ngày` → `'expiringSoon'`; else `'ok'`.
+`expiryFlag` tính ở service theo `item.nearExpiryDays ?? 7`: `status === EXPIRED || expiryDate < now` → `'expired'`; else `expiryDate <= now + nearExpiryDays ngày` → `'expiringSoon'`; else `'ok'`.
 
 ### 3. `GET /reports/performance`
 Query: `dateFrom?`, `dateTo?` (`@IsDateString`, mặc định service tự set `dateTo = now`, `dateFrom = now - 30 ngày` nếu thiếu), `warehouseId?`, `sku?`. **Không phân trang.**
@@ -71,7 +71,7 @@ Không có `AppException` domain-specific — module không thao tác trên 1 do
 ## Testing
 
 - `report.repository.spec.ts`: mock 6 model, assert từng pipeline dựng đúng `$match`/`$group`/`$lookup` stage theo filter truyền vào.
-- `report.service.spec.ts`: mock repository, assert tính `available` đúng công thức, phân loại `expiryFlag` đúng biên (đúng 7 ngày, đúng thời điểm `now`), mặc định `dateFrom`/`dateTo` khi không truyền, xử lý case `sku` không khớp `WarehouseItem` nào (trả rỗng, không query xuống collection lớn).
+- `report.service.spec.ts`: mock repository, assert tính `available` đúng công thức, phân loại `expiryFlag` đúng biên (đúng ranh giới `nearExpiryDays` của item, item không set `nearExpiryDays` dùng fallback 7 ngày, đúng thời điểm `now`), mặc định `dateFrom`/`dateTo` khi không truyền, xử lý case `sku` không khớp `WarehouseItem` nào (trả rỗng, không query xuống collection lớn).
 - Không có `report.controller.spec.ts` — khớp quy ước hiện tại (chỉ `auth.controller.ts` có controller spec; các controller domain khác là pass-through mỏng, test ở service/repository).
 
 ## Ngoài phạm vi (không làm trong task này)
