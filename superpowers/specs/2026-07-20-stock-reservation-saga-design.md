@@ -48,9 +48,11 @@ switch (job.name) {
 
 ### `ReservationService.reserveForOrder(orderId, items, preferWarehouse?)`
 
+**Về `preferWarehouse`:** payload `StockReserveRequestedPayload.preferWarehouse` hiện là chuỗi hardcode (`'CENTRAL'`) ở `checkout.service.ts`, nhưng `Warehouse` schema phía WMS chỉ có `name`/`address`/`isActive` — không có `code`/slug nào để đối chiếu chuỗi này với 1 kho cụ thể. Trong phạm vi spec này, **bỏ qua `preferWarehouse`**, không dùng để ưu tiên chọn kho — tham số vẫn được nhận (giữ đúng chữ ký payload) nhưng không ảnh hưởng thứ tự ứng viên. Việc gán `code` thật cho từng kho và dùng nó để ưu tiên là cải tiến riêng, ngoài phạm vi issue #3.
+
 1. **Idempotency**: kiểm tra đã tồn tại `StockMovement` với `refType='reservation', refId=orderId` chưa. Nếu có → log + bỏ qua (job bị retry).
 2. **Chọn kho** (transaction, xem thuật toán bên dưới):
-   - Ứng viên: `preferWarehouse` trước, sau đó các kho active khác.
+   - Ứng viên: mọi kho active, theo thứ tự `createdAt` tăng dần (không ưu tiên theo `preferWarehouse` — xem lý do ở trên).
    - Với mỗi kho ứng viên, thử atomic-reserve từng SKU trong đơn; nếu **toàn bộ SKU** trong đơn đủ tồn ở kho đó → chọn kho này, dừng.
    - Nếu không kho nào đủ hết toàn bộ đơn → rollback mọi reserve tạm thời đã thử ở kho đó (transaction tự abort), thử kho tiếp theo.
 3. Nếu tìm được kho: với mỗi SKU, `insertMovement(type=RESERVE, refType='reservation', refId=orderId, quantity=+qty, warehouseId=kho đã chọn, session)`. Phát `STOCK_RESERVED { orderId, fulfillWarehouseId }`.
@@ -108,8 +110,8 @@ Nếu kết quả `null` → không đủ tồn tại thời điểm đó (kể 
 Unit test (Jest, theo pattern `stock.service.spec.ts` / `goods-issue.service.spec.ts`):
 
 **`ReservationService.reserveForOrder`**
-- Đủ tồn ở `preferWarehouse` → `reserved` tăng đúng theo từng SKU, phát `STOCK_RESERVED` với đúng `fulfillWarehouseId`.
-- `preferWarehouse` thiếu 1 SKU nhưng kho khác đủ toàn bộ → chọn kho khác, không rơi vãi reserve ở `preferWarehouse`.
+- Đủ tồn ở kho ứng viên đầu tiên → `reserved` tăng đúng theo từng SKU, phát `STOCK_RESERVED` với đúng `fulfillWarehouseId`.
+- Kho đầu tiên thiếu 1 SKU nhưng kho thứ 2 đủ toàn bộ → chọn kho thứ 2, không rơi vãi reserve ở kho đầu.
 - Không kho nào đủ toàn bộ đơn → phát `STOCK_RESERVE_FAILED` với đúng `failedSkus`, không có `reserved` nào bị tăng ở bất kỳ kho nào (transaction rollback).
 - SKU không tồn tại trong `WarehouseItem` → không throw, góp vào `failedSkus`.
 - Gọi lại 2 lần cùng `orderId` (mô phỏng retry) → lần 2 không reserve trùng.
