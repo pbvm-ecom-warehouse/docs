@@ -1,7 +1,8 @@
 # App WMS là kho duy nhất — Design
 
 **Ngày:** 2026-07-23  
-**Trạng thái:** Đã duyệt hướng thiết kế, chờ cập nhật tài liệu nguồn và code  
+**Trạng thái:** Đã duyệt hướng thiết kế. Migration code đang triển khai theo
+[2026-07-24-single-warehouse-code-migration-design.md](2026-07-24-single-warehouse-code-migration-design.md).  
 **Phạm vi hiện tại:** Tài liệu trước, chưa thay đổi code
 
 ## 1. Bối cảnh
