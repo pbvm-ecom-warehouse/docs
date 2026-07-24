@@ -76,15 +76,24 @@ constructor(
   @InjectQueue(QUEUES.NOTIFICATION) private readonly notificationQueue: Queue,
 ) {}
 
-/** Kiểm tra available sau biến động, phát stock.low nếu dưới ngưỡng. Gọi SAU KHI
- * transaction Mongo đã commit — BullMQ không tham gia transaction (quy ước có sẵn). */
+/** Kiểm tra available HIỆN TẠI (đọc lại DB, không nhận balance qua tham số) sau
+ * biến động, phát stock.low nếu dưới ngưỡng. Gọi SAU KHI transaction Mongo đã
+ * commit — BullMQ không tham gia transaction (quy ước có sẵn). Đọc lại (không
+ * dùng giá trị upsertBalance trả về ngay trong transaction) để luôn đúng với
+ * TRẠNG THÁI CUỐI CÙNG khi 1 (item,warehouse) bị chạm nhiều lần trong cùng
+ * transaction (vd GoodsReturn dòng DAMAGED: RETURN_IN rồi SCRAP bù ngay sau —
+ * net effect mới là số cần so ngưỡng, không phải số giữa chừng). */
 async checkAndEmitStockLow(
   itemId: Types.ObjectId,
   warehouseId: Types.ObjectId,
-  balance: { onHand: number; reserved: number; expired: number },
 ): Promise<void> {
   const item = await this.stockRepo.findSkuAndMinQuantityById(itemId);
   if (!item || item.minQuantity == null) return;
+  const balance = await this.stockRepo.findBalanceByItemAndWarehouse(
+    itemId,
+    warehouseId,
+  );
+  if (!balance) return;
   const available = balance.onHand - balance.reserved - balance.expired;
   if (available >= item.minQuantity) return;
   const payload: StockLowPayload = {
@@ -97,15 +106,17 @@ async checkAndEmitStockLow(
 }
 ```
 
-Không dùng `jobId` deterministic ở đây (khác `emitStockChanged`) — theo quyết định (1), mỗi lần gọi PHẢI tạo job mới, không được BullMQ de-dup theo id.
+Không dùng `jobId` deterministic ở đây (khác `emitStockChanged`) — theo quyết định (1), mỗi lần gọi PHẢI tạo job mới, không được BullMQ de-dup theo id. `findBalanceByItemAndWarehouse` đã tồn tại sẵn trong `StockRepository` (dùng bởi `print-job.service.ts`) — không cần thêm method mới cho việc đọc balance.
 
 ### Wiring vào 6 service nghiệp vụ
 
-`upsertBalance` đã trả về `StockBalanceDocument | null` với `{ new: true }` — có sẵn `onHand/reserved/expired` sau update, không cần query lại. Theo đúng quy ước "BullMQ ngoài transaction" (đã áp dụng ở `goods-receipt-note.service.ts:238`), mỗi service:
+Vì `checkAndEmitStockLow` tự đọc lại balance mới nhất, các call site **không cần capture giá trị trả về của `upsertBalance`** — chỉ cần biết cặp `(itemId, warehouseId)` nào đã bị chạm. Theo đúng quy ước "BullMQ ngoài transaction" (đã áp dụng ở `goods-receipt-note.service.ts:238`), mỗi service:
 
-1. Khai báo 1 `Map<string, { itemId: Types.ObjectId; warehouseId: Types.ObjectId; balance: {...} }>` trước transaction (key = `` `${itemId}:${warehouseId}` ``, để nếu 1 lô nghiệp vụ chạm cùng 1 (item,warehouse) nhiều lần chỉ giữ bản mới nhất).
-2. Trong transaction, sau mỗi `upsertBalance`, nếu trả về không null thì set vào map.
-3. Sau khi `withStockTransaction(...)` resolve, loop map gọi `stockService.checkAndEmitStockLow(itemId, warehouseId, balance)`.
+1. Khai báo 1 `Map<string, { itemId: Types.ObjectId; warehouseId: Types.ObjectId }>` trước transaction (key = `` `${itemId}:${warehouseId}` ``, dedupe nếu cùng 1 (item,warehouse) bị chạm nhiều lần).
+2. Trong transaction, ngay sau mỗi lệnh gọi `upsertBalance` (không cần đợi/capture kết quả), set entry vào map.
+3. Sau khi `withStockTransaction(...)` resolve, loop map gọi `stockService.checkAndEmitStockLow(itemId, warehouseId)`.
+
+Cách này tự động đúng cho cả trường hợp `goods-return.service.ts` (dòng DAMAGED: `upsertBalance` gọi ở `confirmGoodsReturn` RỒI `upsertBalance` bù gọi bên trong `ScrapNoteService.createApprovedScrapNoteForReturn`, cùng transaction, cùng `(itemId, warehouseId)`) — không cần đổi return type của `createApprovedScrapNoteForReturn`, chỉ cần `confirmGoodsReturn` set map entry cho MỌI dòng (GOOD và DAMAGED) tại điểm gọi `upsertBalance` đầu tiên (dòng ~227); khi `checkAndEmitStockLow` chạy sau commit, nó đọc đúng số dư cuối cùng bất kể có bao nhiêu lệnh `upsertBalance` đã chạm key đó.
 
 Áp dụng cho:
 - `goods-return.service.ts` (dòng ~227)

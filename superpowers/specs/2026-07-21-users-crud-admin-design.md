@@ -84,9 +84,11 @@ export class QueryUsersDto extends OffsetPaginationQuery {
 - `UserRepository` (và `findByUsername`/`findById` dùng cho login) phải filter `deletedAt: null` — user đã xóa không login được nữa (tự nhiên vì `findByUsername` trả null → `AUTH_INVALID_CREDENTIALS` hoặc tương đương).
 - Không cần "undelete" trong scope này.
 
-### 7. Error codes mới (`apps/wms/src/common/error-codes.ts`)
+### 7. Error codes mới — đặt vào `ERROR_CATALOG` (`libs/common/src/errors/error-codes.ts`), KHÔNG phải `WMS_ERRORS`
 
-- `USER_NOT_FOUND` — 404 (thay generic `NOT_FOUND` cho domain user, nhất quán các domain khác trong file này)
+`.claude/rules/error-handling.md` nói mã domain-riêng đặt ở `apps/<app>/src/common/error-codes.ts`, nhưng **`AppException` constructor chỉ fallback status/message từ `ERROR_CATALOG`** (`libs/common/src/errors/app.exception.ts:25-28`) — không merge với `WMS_ERRORS`. Toàn bộ code lỗi WMS thêm gần đây (`WAREHOUSE_*`, `SUPPLIER_*`, `PO_*`, `GRN_*`) đều đã nằm ở `ERROR_CATALOG`, không phải `WMS_ERRORS`. Code mới đi theo quy ước thực tế đang chạy — đặt cả 3 code sau vào `ERROR_CATALOG`, mục `// ── WMS — Users ──`:
+
+- `USER_NOT_FOUND` — 404, "Không tìm thấy nhân viên"
 - `USER_FORBIDDEN_ADMIN_TARGET` — 403, "Không đủ quyền thao tác với tài khoản có vai trò ADMIN"
 - `USER_CANNOT_DELETE_SELF` — 403, "Không thể tự xóa tài khoản của chính mình"
 
